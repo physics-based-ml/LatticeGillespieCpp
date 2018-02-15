@@ -47,6 +47,11 @@ int main() {
 	Semi-attractor dynamics
 	****************************************/
 	
+	/********************
+	Version 1
+	********************/
+
+	/*
 	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=1.0;
 	// Box length
 	int box_length = 20;
@@ -60,28 +65,45 @@ int main() {
 	double probp2 = m*kp2;
 	double probp4 = m*kp4;
 	double probm5 = m*km5;
+	*/
 
-	/****************************************
-	New
-	****************************************/
-	
+	/********************
+	Version 2
+	********************/
+
 	/*
-	// Rates
-	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=18.5, km5=0.4;
-
+	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=2.0;
 	// Box length
 	int box_length = 20;
 
 	// Times
-	double dt = 0.001;
+	double dt = 0.0001;
 
 	// Reaction probs
-	double m = 0.05;
+	double m = 0.02;
 	double probm1 = m*km1;
 	double probp2 = m*kp2;
 	double probp4 = m*kp4;
 	double probm5 = m*km5;
 	*/
+
+	/****************************************
+	New
+	****************************************/
+	
+	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=18.5, km5=2.0;
+	// Box length
+	int box_length = 20;
+
+	// Times
+	double dt = 0.0001;
+
+	// Reaction probs
+	double m = 0.02;
+	double probm1 = m*km1;
+	double probp2 = m*kp2;
+	double probp4 = m*kp4;
+	double probm5 = m*km5;
 
 	/****************************************
 	Make a simulation!
