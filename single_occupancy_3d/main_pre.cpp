@@ -33,8 +33,8 @@ double get_std(std::vector<int> v) {
 int main() {
 
 	// Seed random no
-	srand (time(NULL));
-	// srand (2);
+	// srand (time(NULL));
+	srand (2);
 
 	// Initital counts of species
 	std::map<std::string,int> counts0;
@@ -43,9 +43,11 @@ int main() {
 	counts0["B"] = 100;
 	counts0["C"] = 100;
 
-	// Rates
+	/****************************************
+	Semi-attractor dynamics
+	****************************************/
+	
 	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=1.0;
-
 	// Box length
 	int box_length = 20;
 
@@ -58,6 +60,28 @@ int main() {
 	double probp2 = m*kp2;
 	double probp4 = m*kp4;
 	double probm5 = m*km5;
+
+	/****************************************
+	New
+	****************************************/
+	
+	/*
+	// Rates
+	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=18.5, km5=0.4;
+
+	// Box length
+	int box_length = 20;
+
+	// Times
+	double dt = 0.001;
+
+	// Reaction probs
+	double m = 0.05;
+	double probm1 = m*km1;
+	double probp2 = m*kp2;
+	double probp4 = m*kp4;
+	double probm5 = m*km5;
+	*/
 
 	/****************************************
 	Make a simulation!
@@ -112,7 +136,7 @@ int main() {
 	int n_steps = 1000001;
 
 	// Run
-	sim.run(n_steps,true,false);
+	sim.run(n_steps,true,true);
 
 	/********************
 	Write

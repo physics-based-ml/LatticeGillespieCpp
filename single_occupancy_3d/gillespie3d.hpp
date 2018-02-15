@@ -33,6 +33,9 @@
 #include "lattice.hpp"
 #endif
 
+// Diagnostic flags
+#define DIAG_DIFFUSE 0
+
 /************************************
 * Namespace for Gillespie3D
 ************************************/
@@ -128,10 +131,22 @@ namespace Gillespie3D {
 		void populate_lattice(std::map<std::string,int> counts);
 
 		/********************
+		Do a uni reaction
+		********************/
+
+		void do_uni_rxn(UniReaction *rxn);
+
+		/********************
+		Diffuse all the mols and do bimol reactions
+		********************/
+
+		void diffuse_mols();
+
+		/********************
 		Run simulation
 		********************/
 
-		void run(int n_timesteps, bool verbose = false, bool write_statistics = false);
+		void run(int n_timesteps, bool verbose = false, bool write = false);
 
 		/********************
 		Write lattice

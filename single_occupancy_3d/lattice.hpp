@@ -30,7 +30,34 @@
 namespace Gillespie3D {
 
 	/****************************************
-	Structure to hold a lattice Site
+	General functions
+	****************************************/
+
+	typedef std::map<int,std::map<int,std::map<int,Mol>>> lattice_map;
+	typedef std::map<int,std::map<int,Mol>> lattice_map_1;
+	typedef std::map<int,Mol> lattice_map_2;
+
+	// Random numbers
+	double randD(double dMin, double dMax);
+	int randI(int iMin, int iMax);
+
+	/****************************************
+	Structure to hold a lattice site iterator
+	****************************************/
+
+	struct SiteIt {
+		lattice_map::iterator it;
+		lattice_map_1::iterator it_1;
+		lattice_map_2::iterator it_2;	
+
+		// Constructor
+		SiteIt();
+		SiteIt(lattice_map::iterator itIn, lattice_map_1::iterator it_1In, lattice_map_2::iterator it_2In);	
+	};
+	std::ostream& operator<<(std::ostream& os, const SiteIt& sit);
+
+	/****************************************
+	Structure to hold a lattice site
 	****************************************/
 
 	struct Site {
@@ -39,22 +66,14 @@ namespace Gillespie3D {
 		int z;	
 
 		// Constructor
-		Site(int xIn, int yIn, int zIn);	
+		Site();
+		Site(int xIn, int yIn, int zIn);
+		Site(SiteIt sit);
 	};
 	// Comparator
 	bool operator <(const Site& a, const Site& b);
 	bool operator==(const Site& a, const Site& b);
 	std::ostream& operator<<(std::ostream& os, const Site& s);
-
-	/****************************************
-	General functions
-	****************************************/
-
-	typedef std::map<Site, Mol> lattice_map;
-
-	// Random numbers
-	double randD(double dMin, double dMax);
-	int randI(int iMin, int iMax);
 
 	/****************************************
 	Lattice
@@ -64,25 +83,22 @@ namespace Gillespie3D {
 	{
 	private:
 
-		// Internal map
+		// Internal maps
 		lattice_map _map;
 
 		// Size
 		int _box_length;
 
 		/********************
-		Get an iterator to a random site
+		Get random indexes
 		********************/
 
-		std::pair<bool,lattice_map::iterator> _get_random_site_occ(Species *sp);
-		std::pair<bool,Site> _get_random_site_free();
+		std::map<int,std::vector<int>> _get_random_idxs();
 
 		/********************
-		Get neighbors of a site
+		Get all neighbors of a site
 		********************/
 
-		Site _get_random_neighbor(Site s);
-		std::pair<bool,Site> _get_random_neighbor_free(Site s);
 		std::vector<Site> _get_all_neighbors(Site s);
 
 	public:
@@ -95,49 +111,56 @@ namespace Gillespie3D {
 		~Lattice();
 
 		/********************
-		Erase/create/move mols
+		Clear, size
 		********************/
 
-		// Erase a mol from a site
-		void erase_mol(Site s);
-		std::pair<bool,Site> erase_mol_random(Species *sp);
-
-		// Make a new site
-		bool make_mol(Site s, Species *sp);
-		std::pair<bool,Site> make_mol_random(Species *sp);
+		void clear();
+		int size();
 
 		/********************
-		Populate a lattice
+		Make a mol
 		********************/
 
-		// Populate lattice randomly
-		void populate_lattice(std::map<Species*,int> counts);
+		std::pair<bool,SiteIt> make_mol(Site s, Species *sp);
+		std::pair<bool,SiteIt> make_mol_random(Species *sp);
+
+		/********************
+		Erase a mol
+		********************/
+
+		bool erase_mol(Site s);
+		bool erase_mol_it(SiteIt sit);
+		std::pair<bool,Site> erase_mol_random(Species *sp);
+
+		/********************
+		Get a mol
+		********************/
+
+		std::pair<bool,SiteIt> get_mol_it(Site s);
+		std::pair<bool,SiteIt> get_mol_it(Site s, Species *sp);
+		std::pair<bool,SiteIt> get_mol_random_it();
+		std::pair<bool,SiteIt> get_mol_random_it(Species *sp);
+
+		/********************
+		Get a free site
+		********************/
+
+		std::pair<bool,Site> get_free_site();
+
+		/********************
+		Get neighbors of a site
+		********************/
+
+		std::pair<Site,std::pair<bool,SiteIt>> get_neighbor_random(Site s);
+		std::pair<Site,std::pair<bool,SiteIt>> get_neighbor_random(SiteIt sit);
+		std::pair<bool,Site> get_free_neighbor_random(Site s);
+		std::pair<bool,Site> get_free_neighbor_random(SiteIt sit);
 
 		/********************
 		Write lattice to a file
 		********************/
 
-		// Write lattice to a file
 		void write_to_file(std::string fname);
-
-		/********************
-		Do a uni reaction
-		********************/
-
-		void do_uni_rxn(UniReaction *rxn);
-
-		/********************
-		Check for bimol reactions inside each voxel
-		********************/
-
-		void check_rxns_in_voxels();
-
-		/********************
-		Diffuse all the mols and do bimol reactions
-		********************/
-
-		void diffuse_mols();
-
 	};
 
 };

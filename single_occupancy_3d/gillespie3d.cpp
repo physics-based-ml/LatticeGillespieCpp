@@ -182,19 +182,244 @@ namespace Gillespie3D {
 	********************/
 
 	void Simulation::populate_lattice(std::map<std::string,int> counts) {
-		std::map<Species*,int> mcounts;
-		for (auto c: counts) {
-			mcounts[_find_species(c.first)] = c.second;
+	    // Go through all species
+		Species *s;
+		for (auto c: counts) 
+		{
+			s = _find_species(c.first);
+	    	for (auto i=0; i<c.second; i++) 
+	    	{
+	    		// Make
+		    	this->_lattice.make_mol_random(s);	
+	    	};
 		};
-		this->_lattice.populate_lattice(mcounts);
 	};
+	
+	/********************
+	Do a uni reaction
+	********************/
+
+	void Simulation::do_uni_rxn(UniReaction *rxn) {
+
+		// Declarations
+		std::pair<bool,SiteIt> get_it;
+		SiteIt sit;
+		Site s,snbr;
+		std::pair<bool,Site> free_pair;
+
+		// Try to do the reaction at several sites
+		// Failure can arise if there is not enough room for the products
+		int ctr = 0;
+		while (ctr < 20) {
+
+			// Grab a random site
+			get_it = this->_lattice.get_mol_random_it(rxn->r);
+			if (!(get_it.first)) {
+				// No sites with this species exist; stop
+				return;
+			};
+			sit = get_it.second;
+			s = Site(sit);
+
+			// Check if there is room for the products
+			if (rxn->p.size() == 2) {
+				free_pair = this->_lattice.get_free_neighbor_random(sit);
+				if (!(free_pair.first)) {
+					// Not enough room for the two products; try again with a different random site
+					ctr += 1;
+					continue;
+				} else {
+					snbr = free_pair.second;
+				};
+			};
+
+			// Remove the reactant
+			this->_lattice.erase_mol_it(sit);
+
+			// Conserve reactants
+			if (rxn->r->conserved) {
+				this->_lattice.make_mol_random(rxn->r);
+			};
+
+			// Place products, if needed at the neighbor site
+			if (rxn->p.size() == 1) {
+				this->_lattice.make_mol(s, rxn->p[0]);
+			} else if (rxn->p.size() == 2) {
+				this->_lattice.make_mol(s, rxn->p[0]);
+				this->_lattice.make_mol(snbr, rxn->p[1]);
+			};
+
+			// Conserve products
+			for (auto p: rxn->p)
+			{
+				if (p->conserved) {
+					this->_lattice.erase_mol_random(p);
+				};
+			};
+
+			// Sucess
+			return;
+		};
+	};
+
+	/********************
+	Diffuse all the mols and do bimol reactions
+	********************/
+
+	void Simulation::diffuse_mols() 
+	{
+		// Copy the old map
+		Lattice todo = this->_lattice;
+
+		// Clear the current lattice
+		this->_lattice.clear();
+
+		// Declarations needed
+		std::pair<bool,SiteIt> old_pair;
+		SiteIt sOldIt,sNewIt;
+		Site sNew,sOld;
+		Mol *mOld,*mColl;
+		std::pair<Site,std::pair<bool,SiteIt>> nbr_pair;
+		bool occ_todo, occ_done;
+		std::pair<bool,SiteIt> coll_done_pair;
+		std::pair<bool,BiReaction*> rxn_pair;
+		BiReaction *rxn; 
+
+		// Go over all mols to move
+		while (todo.size() > 0) {
+
+			if (DIAG_DIFFUSE) { std::cout << std::endl; };
+
+			// Reset
+			occ_todo = false;
+			occ_done = false;
+
+			// Grab some element
+			old_pair = todo.get_mol_random_it();
+
+			sOldIt = old_pair.second;
+			mOld = &(sOldIt.it_2->second);
+
+			if (DIAG_DIFFUSE) { std::cout << "diffuse_mols: got element..." << std::flush; };
+
+			// Move
+			nbr_pair = todo.get_neighbor_random(sOldIt);
+			sNew = nbr_pair.first;
+
+			if (DIAG_DIFFUSE) { std::cout << "got neighbor..." << std::flush; };
+
+			// Check if occupied in todo lattice
+			occ_todo = nbr_pair.second.first;
+			if (occ_todo) {
+				// Yes; its collided with something in the todo pile
+				sNewIt = nbr_pair.second.second;
+				mColl = &(sNewIt.it_2->second);
+			} else {
+				// No; check if it's collided with something in the done pile
+				coll_done_pair = this->_lattice.get_mol_it(sNew);
+				occ_done = coll_done_pair.first;
+				if (occ_done) {
+					// Yes; its collided with something in the done pile
+					sNewIt = coll_done_pair.second;
+					mColl = &(sNewIt.it_2->second);
+				};
+			};
+
+			if (DIAG_DIFFUSE) { std::cout << "check colls..." << std::flush; };
+
+			// If unoccupied, just commit the move (diffuse)
+			if (!occ_todo && !occ_done) {
+				// Move
+				this->_lattice.make_mol(sNew, mOld->sp);
+				// Continue
+				todo.erase_mol_it(sOldIt);
+				continue;
+			};
+
+			// Collision; check if reaction occurs
+			rxn_pair = mOld->check_bi_rxns_mol(mColl);
+
+			if (DIAG_DIFFUSE) { std::cout << "checked rxn..." << std::flush; };
+
+			// No reaction occurred?
+			if (!(rxn_pair.first)) {
+				// No reaction & don't move
+				this->_lattice.make_mol(Site(sOldIt), mOld->sp);
+				// Continue
+				todo.erase_mol_it(sOldIt);
+				continue;
+			};
+
+			// Reaction occurred
+			rxn = rxn_pair.second;
+			rxn->count++;
+
+			if (DIAG_DIFFUSE) { std::cout << "rxn occurred..." << std::flush; };
+
+			// Remove the reactants
+			sOld = Site(sOldIt); // grab it before it's erased
+			todo.erase_mol_it(sOldIt);
+			if (occ_todo) { 
+				// Note: the old iterator sNewIt has been invalidated :(
+				todo.erase_mol(sNew);
+			} else if (occ_done) { 
+				this->_lattice.erase_mol(sNewIt); 
+			};
+
+			if (DIAG_DIFFUSE) { std::cout << "removed r..." << std::flush; };
+
+			// Conserve reactants
+			if (rxn->r1->conserved) {
+				this->_lattice.make_mol_random(rxn->r1);
+			};
+			if (rxn->r2->conserved) {
+				this->_lattice.make_mol_random(rxn->r2);
+			};
+
+			if (DIAG_DIFFUSE) { std::cout << "conserved r..." << std::flush; };
+
+			// Place products, if needed at the old site
+			if (rxn->p.size() == 1) {
+				this->_lattice.make_mol(sNew, rxn->p[0]);
+			} else if (rxn->p.size() == 2) {
+				this->_lattice.make_mol(sNew, rxn->p[0]);
+				this->_lattice.make_mol(sOld, rxn->p[1]);
+			};
+
+			if (DIAG_DIFFUSE) { std::cout << "added p..." << std::flush; };
+
+			// Conserve products
+			for (auto p: rxn->p)
+			{
+				if (p->conserved) {
+					this->_lattice.erase_mol_random(p);
+				};
+			};
+
+			if (DIAG_DIFFUSE) { std::cout << "conserved p..." << std::flush; };
+
+			// Finished
+		};
+	};
+
 
 	/********************
 	Run simulation
 	********************/
 
-	void Simulation::run(int n_timesteps, bool verbose, bool write_statistics)
+	void Simulation::run(int n_timesteps, bool verbose, bool write)
 	{
+		// Clear data in files if writing
+		std::ofstream ofs;
+		std::stringstream fname;
+		if (write) {
+			for (auto s: this->_species) {
+				fname << "species_" << s.name << ".txt";
+				ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
+				ofs.close();
+				fname.str("");
+			};
+		};
 
 		// Go over all timesteps
 		double t_next;
@@ -203,10 +428,20 @@ namespace Gillespie3D {
 			// The next time
 			t_next = this->_t + this->_dt;
 
-			// Print if needed
-			if (verbose) {
-				if (this->_t_step % 20 == 0) {
+			// Print/Write if needed
+			if (this->_t_step % 20 == 0) {
+				if (verbose) {
 					std::cout << "Time: " << this->_t << " " << this->_species << std::endl;
+				};
+				if (write) {
+					// Write species counts to file
+					for (auto s: this->_species) {
+						fname << "species_" << s.name << ".txt";
+						ofs.open(fname.str(), std::ofstream::app);
+						ofs << this->_t << " " << s.count << "\n";
+						ofs.close();
+						fname.str("");
+					};
 				};
 			};
 
@@ -220,7 +455,7 @@ namespace Gillespie3D {
 			// Do uni reactions
 			while (this->_uni_next != nullptr && this->_t_uni_next < t_next) {
 				// Do it
-				this->_lattice.do_uni_rxn(this->_uni_next);
+				do_uni_rxn(this->_uni_next);
 				// Advance time
 				this->_t = this->_t_uni_next;
 				// Schedule
@@ -228,7 +463,7 @@ namespace Gillespie3D {
 			};
 
 			// Diffuse and do bimol reactions
-			this->_lattice.diffuse_mols();
+			diffuse_mols();
 
 			// It is now the next time
 			this->_t = t_next;
