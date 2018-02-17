@@ -367,6 +367,45 @@ namespace Gillespie3D {
 	};
 
 	/********************
+	Get NN of species
+	********************/
+
+	int Lattice::get_nn(Species *sa, Species *sb)
+	{
+		int nn = 0;
+		// Go through all sites
+		Site s;
+		std::pair<bool,SiteIt> spair;
+		std::vector<Site> nbrs;
+		for (auto i1=1; i1 <= this->_box_length; i1++) {
+			for (auto i2=1; i2 <= this->_box_length; i2++) {
+				for (auto i3=1; i3 <= this->_box_length; i3++) {
+					s = Site(i1,i2,i3);
+					spair = get_mol_it(s,sa);
+					if (spair.first) {
+						// This one is species A
+						// Now search all neigbors
+						nbrs = _get_all_neighbors(s);
+						// Go through all neighbors
+						for (auto nbr: nbrs) {
+							spair = get_mol_it(nbr,sb);
+							if (spair.first) {
+								// Ok!
+								nn++;
+							};
+						};
+					};
+				};
+			};
+		};
+		// Double counting?
+		if (sa == sb) {
+			nn /= 2;
+		};
+		return nn;
+	};
+
+	/********************
 	Write lattice to a file
 	********************/
 

@@ -33,8 +33,8 @@ double get_std(std::vector<int> v) {
 int main() {
 
 	// Seed random no
-	// srand (time(NULL));
-	srand (2);
+	srand (time(NULL));
+	// srand (2);
 
 	// Initital counts of species
 	std::map<std::string,int> counts0;
@@ -60,7 +60,7 @@ int main() {
 	double dt = 0.001;
 
 	// Reaction probs
-	double m = 0.2;
+	double m = 0.15;
 	double probm1 = m*km1;
 	double probp2 = m*kp2;
 	double probp4 = m*kp4;
@@ -87,19 +87,59 @@ int main() {
 	double probm5 = m*km5;
 	*/
 
-	/****************************************
-	New
-	****************************************/
-	
-	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=18.5, km5=2.0;
+	/********************
+	Version 3
+	********************/
+
+	/*
+ 	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=0.6;
 	// Box length
 	int box_length = 20;
 
 	// Times
-	double dt = 0.0001;
+	double dt = 0.01;
 
 	// Reaction probs
-	double m = 0.02;
+	double m = 0.5;
+	double probm1 = m*km1;
+	double probp2 = m*kp2;
+	double probp4 = m*kp4;
+	double probm5 = m*km5;
+	*/
+
+	/********************
+	Version 4
+	********************/
+
+	/*
+ 	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=0.9;
+	// Box length
+	int box_length = 10;
+
+	// Times
+	double dt = 0.01;
+
+	// Reaction probs
+	double m = 0.4;
+	double probm1 = m*km1;
+	double probp2 = m*kp2;
+	double probp4 = m*kp4;
+	double probm5 = m*km5;
+	*/
+
+	/****************************************
+	New
+	****************************************/
+	
+	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=1.0;
+	// Box length
+	int box_length = 20;
+
+	// Times
+	double dt = 0.001;
+
+	// Reaction probs
+	double m = 0.15;
 	double probm1 = m*km1;
 	double probp2 = m*kp2;
 	double probp4 = m*kp4;
@@ -155,10 +195,16 @@ int main() {
 	********************/
 
 	// Number of steps to run
-	int n_steps = 1000001;
+	int n_steps = 10001;
 
 	// Run
-	sim.run(n_steps,true,true);
+	bool verbose = true;
+	bool write_counts = true;
+	bool write_nns = true;
+	bool write_latt = true;
+	int write_step = 1;
+	int write_version_no = 1;
+	sim.run(n_steps,verbose,write_counts,write_nns,write_latt,write_step,write_version_no);
 
 	/********************
 	Write

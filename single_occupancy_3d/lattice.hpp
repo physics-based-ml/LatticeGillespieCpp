@@ -157,6 +157,12 @@ namespace Gillespie3D {
 		std::pair<bool,Site> get_free_neighbor_random(SiteIt sit);
 
 		/********************
+		Get NN of species
+		********************/
+
+		int get_nn(Species *sa, Species *sb);
+
+		/********************
 		Write lattice to a file
 		********************/
 

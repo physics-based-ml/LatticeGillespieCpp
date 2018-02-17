@@ -146,13 +146,13 @@ namespace Gillespie3D {
 		Run simulation
 		********************/
 
-		void run(int n_timesteps, bool verbose = false, bool write = false);
+		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0);
 
 		/********************
 		Write lattice
 		********************/
 
-		void write_lattice(int index);
+		void write_lattice(int index, int write_version_no);
 	};
 
 };
