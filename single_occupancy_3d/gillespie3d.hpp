@@ -18,16 +18,6 @@
 
 // Other Gillespie3D
 
-#ifndef SPECIES_h
-#define SPECIES_h
-#include "species.hpp"
-#endif
-
-#ifndef REACTIONS_h
-#define REACTIONS_h
-#include "reactions.hpp"
-#endif
-
 #ifndef LATTICE_h
 #define LATTICE_h
 #include "lattice.hpp"

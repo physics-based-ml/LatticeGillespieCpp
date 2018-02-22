@@ -30,6 +30,14 @@
 namespace Gillespie3D {
 
 	/****************************************
+	General functions
+	****************************************/
+	
+	// Random numbers
+	double randD(double dMin, double dMax);
+	int randI(int iMin, int iMax);
+
+	/****************************************
 	Necessary declarations
 	****************************************/
 

@@ -1,46 +1,13 @@
-#ifndef LATTICE_h
-#define LATTICE_h
 #include "lattice.hpp"
-#endif
-
-#ifndef IOSTREAM_h
-#define IOSTREAM_h
 #include <iostream>
-#endif
-
-#ifndef FSTREAM_h
-#define FSTREAM_h
 #include <fstream>
-#endif
-
-#ifndef NUMERIC_h
-#define NUMERIC_h
 #include <numeric>
-#endif
-
 
 /************************************
 * Namespace for Gillespie3D
 ************************************/
 
 namespace Gillespie3D {
-
-	/****************************************
-	General functions
-	****************************************/
-
-	/********************
-	Random numbers
-	********************/
-
-	double randD(double dMin, double dMax)
-	{
-	    return dMin + ((double)rand() / RAND_MAX) * (dMax - dMin);
-	};
-	int randI(int iMin, int iMax)
-	{
-		return iMin + rand() % (iMax - iMin + 1);
-	};
 
 	/****************************************
 	Structure to hold a lattice site iterator

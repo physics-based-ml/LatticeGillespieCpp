@@ -1,37 +1,11 @@
-// Include header
 #include "gillespie3d.hpp"
-
-// iostream
-#ifndef IOSTREAM_h
-#define IOSTREAM_h
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#endif
-
-// algorithm for sort
-#ifndef ALGORITHM_h
-#define ALGORITHM_h
 #include <algorithm>
-#endif
-
-// Random numbers
-#ifndef RAND_h
-#define RAND_h
 #include <stdlib.h>     /* srand, rand */
-#endif
-
-// Math
-#ifndef MATH_h
-#define MATH_h
 #include <math.h>
-#endif
-
-// Writing to file
-#ifndef FSTREAM_h
-#define FSTREAM_h
 #include <fstream>
-#endif
 
 /************************************
 * Namespace for Gillespie3D

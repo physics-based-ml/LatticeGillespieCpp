@@ -37,10 +37,6 @@ namespace Gillespie3D {
 	typedef std::map<int,std::map<int,Mol>> lattice_map_1;
 	typedef std::map<int,Mol> lattice_map_2;
 
-	// Random numbers
-	double randD(double dMin, double dMax);
-	int randI(int iMin, int iMax);
-
 	/****************************************
 	Structure to hold a lattice site iterator
 	****************************************/

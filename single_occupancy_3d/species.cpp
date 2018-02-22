@@ -1,20 +1,27 @@
-#ifndef SPECIES_h
-#define SPECIES_h
 #include "species.hpp"
-#endif
-
-// Other Gillespie3D
-
-#ifndef LATTICE_h
-#define LATTICE_h
-#include "lattice.hpp"
-#endif
 
 /************************************
 * Namespace for Gillespie3D
 ************************************/
 
 namespace Gillespie3D {
+
+	/****************************************
+	General functions
+	****************************************/
+
+	/********************
+	Random numbers
+	********************/
+
+	double randD(double dMin, double dMax)
+	{
+	    return dMin + ((double)rand() / RAND_MAX) * (dMax - dMin);
+	};
+	int randI(int iMin, int iMax)
+	{
+		return iMin + rand() % (iMax - iMin + 1);
+	};
 
 	/****************************************
 	Species
