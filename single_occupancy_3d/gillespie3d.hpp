@@ -62,6 +62,9 @@ namespace Gillespie3D {
 		// List of unimol rxns
 		std::list<UniReaction> _uni_rxns;
 
+		// Box length
+		int _box_length;
+
 		// Current time
 		double _t;
 		int _t_step;
@@ -119,6 +122,7 @@ namespace Gillespie3D {
 		********************/
 
 		void populate_lattice(std::map<std::string,int> counts);
+		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
 
 		/********************
 		Do a uni reaction

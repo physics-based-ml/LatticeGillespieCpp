@@ -50,6 +50,7 @@ namespace Gillespie3D {
 		this->_t = 0.0;
 		this->_t_step = 0;
 		this->_dt = dt;
+		this->_box_length = box_length;
 	};
 
 	// Destructor
@@ -168,7 +169,41 @@ namespace Gillespie3D {
 	    	};
 		};
 	};
-	
+
+	void Simulation::populate_lattice(std::map<std::string,double> &h_dict,std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
+		// Start by populating lattice randomly
+
+		// Random number of initial particles (min is 1, max is box vol)
+		int n = randI(1, _box_length*_box_length*_box_length);
+
+		// Random initial counts
+		int n_possible = pow(_box_length,3);
+		std::map<std::string,int> counts0;
+		for (auto hpr : h_dict) {
+			counts0[hpr.first] = randI(0,n_possible);
+			n_possible -= counts0[hpr.first];
+			if (n_possible < 0) { n_possible = 0; };
+		};
+
+		// Random initial lattice
+		populate_lattice(counts0);
+
+		// Convert the strings into species
+		std::map<Species*, double> h_dict_sp;
+		std::map<Species*,std::map<Species*,double> > j_dict_sp;
+		for (auto hpr: h_dict) {
+			h_dict_sp[_find_species(hpr.first)] = hpr.second;
+		};
+		for (auto jpr1: j_dict) {
+			for (auto jpr2: jpr1.second) {
+				j_dict_sp[_find_species(jpr1.first)][_find_species(jpr2.first)] = jpr2.second;
+			};
+		};
+
+		// Now anneal
+		this->_lattice.anneal(h_dict_sp,j_dict_sp,n_steps);
+	};
+
 	/********************
 	Do a uni reaction
 	********************/

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <numeric>
+#include "math.h"
 
 /************************************
 * Namespace for Gillespie3D
@@ -389,6 +390,94 @@ namespace Gillespie3D {
 		};
 		f.close();
 	};
+
+	/********************
+	Anneal
+	********************/
+
+	void Lattice::anneal(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps) {
+
+		// Declarations
+
+		Site s;
+
+		std::pair<bool,SiteIt> ret_site;
+		Species* sp;
+
+		std::vector<Site> nbrs;
+		std::vector<Species*> nbrs_occ;
+		std::vector<Site>::iterator it_nbr;
+		std::pair<bool,SiteIt> ret_nbr;
+
+		std::map<Species*,double>::iterator ith;
+
+		double hOld,jOld,hNew,jNew,energy_diff;
+
+		// Go through the steps
+		for (int i=0; i<n_steps; i++) {
+
+			// Pick a site to flip randomly
+			s = Site(randI(1,_box_length),randI(1,_box_length),randI(1,_box_length));
+
+			// Get occupied neighbors 
+			nbrs = _get_all_neighbors(s);
+			it_nbr = nbrs.begin();
+			while (it_nbr != nbrs.end()) {
+				ret_nbr = get_mol_it(*it_nbr);
+				if (ret_nbr.first) {
+					// Occupied
+					nbrs_occ.push_back(ret_nbr.second.it_2->second.sp);
+					it_nbr++;
+				} else {
+					// Empty
+					it_nbr = nbrs.erase(it_nbr);
+				};
+			};
+
+			// Check if this site is occupied
+			ret_site = get_mol_it(s);
+			if (ret_site.first) {
+				// Occupied, flip down
+				sp = ret_site.second.it_2->second.sp;
+				hOld = -h_dict[sp];
+				jOld = 0.0;
+				for (auto nbr: nbrs_occ) {
+					jOld -= j_dict[sp][nbr];
+				};
+				// New couplings
+				hNew = 0.0;
+				jNew = 0.0;
+			} else {
+				// Unoccupied, flip up
+				hOld = 0.0;
+				jOld = 0.0;
+				// Random species
+				ith = h_dict.begin();
+				std::advance(ith, randI(0,h_dict.size()-1));
+				sp = ith->first;
+				// New couplings
+				hNew = -ith->second;
+				jNew = 0.0;
+				for (auto nbr: nbrs_occ) {
+					jNew -= j_dict[sp][nbr];
+				};
+			};
+
+			// Energy difference
+			energy_diff = hNew + jNew - hOld - jOld;
+			if (energy_diff < 0.0 || exp(-energy_diff) > randD(0.0,1.0)) {
+				// Accept the flip!
+				if (ret_site.first) {
+					// Occupied, flip down
+					erase_mol_it(ret_site.second);
+				} else {
+					// Unoccupied, flip up
+					make_mol(s,sp);
+				};
+			};
+		};
+	};
+
 
 	/****************************************
 	Lattice - PRIVATE
