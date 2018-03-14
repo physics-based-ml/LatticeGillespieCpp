@@ -1,20 +1,27 @@
-#ifndef SPECIES_h
-#define SPECIES_h
 #include "species.hpp"
-#endif
-
-// Other Gillespie3D
-
-#ifndef LATTICE_h
-#define LATTICE_h
-#include "lattice.hpp"
-#endif
 
 /************************************
-* Namespace for Gillespie3D
+* Namespace for Gillespie1D
 ************************************/
 
-namespace Gillespie3D {
+namespace Gillespie1D {
+
+	/****************************************
+	General functions
+	****************************************/
+
+	/********************
+	Random numbers
+	********************/
+
+	double randD(double dMin, double dMax)
+	{
+	    return dMin + ((double)rand() / RAND_MAX) * (dMax - dMin);
+	};
+	int randI(int iMin, int iMax)
+	{
+		return iMin + rand() % (iMax - iMin + 1);
+	};
 
 	/****************************************
 	Species
@@ -52,12 +59,12 @@ namespace Gillespie3D {
 	Check if any reactions are possible; if so, return a random one
 	********************/
 
-	std::pair<bool,BiReaction*> Species::check_bi_rxns_mol(Mol &other) {
+	std::pair<bool,BiReaction*> Species::check_bi_rxns_mol(Mol *other) {
 		std::map<Species*,std::vector<BiReaction*>>::iterator itm;
 		std::vector<BiReaction*>::iterator itb;
 
 		// Check all reactions on this species
-		itm = this->bi_rxns.find(other.sp);
+		itm = this->bi_rxns.find(other->sp);
 		if (itm != this->bi_rxns.end()) {
 			// There is a reaction - check if any succeed
 			for (auto ib=0; ib < itm->second.size(); ib++)
@@ -72,26 +79,12 @@ namespace Gillespie3D {
 		return std::make_pair(false,nullptr);
 	};
 
-	std::pair<bool,std::pair<Mol*,BiReaction*>> Species::check_bi_rxns_mols(mvec &other) {
-		std::pair<bool,BiReaction*> ret;
-
-		// Go through all other mols
-		for (auto im = 0; im < other.size(); im++) {
-			ret = check_bi_rxns_mol(other[im]);
-			if (ret.first) {
-				return std::make_pair(true,std::make_pair(&(other[im]),ret.second));
-			};
-		};
-		return std::make_pair(false,std::make_pair(nullptr,nullptr));
-	};
-
 	/****************************************
 	Mol
 	****************************************/
 
 	Mol::Mol(Species *spIn) {
 		this->sp = spIn;
-		this->has_moved = false;
 	};
 
 	// Comparator
@@ -103,10 +96,8 @@ namespace Gillespie3D {
 	Check if any reactions are possible; if so, return a random one
 	********************/
 
-	std::pair<bool,BiReaction*> Mol::check_bi_rxns_mol(Mol &other) {
+	std::pair<bool,BiReaction*> Mol::check_bi_rxns_mol(Mol *other) {
 		return this->sp->check_bi_rxns_mol(other);
 	};
-	std::pair<bool,std::pair<Mol*,BiReaction*>> Mol::check_bi_rxns_mols(mvec &other) {
-		return this->sp->check_bi_rxns_mols(other);
-	};
+
 };

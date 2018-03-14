@@ -1,29 +1,27 @@
-#include "lattice.hpp"
+#include "lattice1d.hpp"
 #include <iostream>
 #include <fstream>
 #include <numeric>
 #include "math.h"
 
 /************************************
-* Namespace for Gillespie3D
+* Namespace for Gillespie1D
 ************************************/
 
-namespace Gillespie3D {
+namespace Gillespie1D {
 
 	/****************************************
 	Structure to hold a lattice site iterator
 	****************************************/
 
 	SiteIt::SiteIt() {};
-	SiteIt::SiteIt(lattice_map::iterator itIn, lattice_map_1::iterator it_1In, lattice_map_2::iterator it_2In) 
+	SiteIt::SiteIt(lattice_map::iterator itIn) 
 	{
 		this->it = itIn;
-		this->it_1 = it_1In;
-		this->it_2 = it_2In;
 	};
 	std::ostream& operator<<(std::ostream& os, const SiteIt& sit)
 	{
-	    return os << sit.it->first << " " << sit.it_1->first << " " << sit.it_2->first;
+	    return os << sit.it->first;
 	};
 
 	/****************************************
@@ -32,31 +30,27 @@ namespace Gillespie3D {
 
 	// Constructor
 	Site::Site() {};
-	Site::Site(int xIn, int yIn, int zIn) {
+	Site::Site(int xIn) {
 		this->x = xIn;
-		this->y = yIn;
-		this->z = zIn;
 	};
 	Site::Site(SiteIt sit) {
 		this->x = sit.it->first;
-		this->y = sit.it_1->first;
-		this->z = sit.it_2->first;
 	};
 
 	// Comparator
 	bool operator <(const Site& a, const Site& b) {
-    	return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z);
+    	return a.x < b.x;
 	};
 	bool operator==(const Site& a, const Site& b) {
-		return std::tie(a.x, a.y, a.z) == std::tie(b.x, b.y, b.z);
+		return a.x==b.x;
 	}; 
 	std::ostream& operator<<(std::ostream& os, const Site& s)
 	{
-	    return os << s.x << " " << s.y << " " << s.z;
+	    return os << s.x;
 	};
 
 	/****************************************
-	Lattice
+	Lattice1D
 	****************************************/
 
 	/********************
@@ -64,26 +58,26 @@ namespace Gillespie3D {
 	********************/
 
 	// Constructor
-	Lattice::Lattice(int box_length)
+	Lattice1D::Lattice1D(int box_length)
 	{
 		this->_box_length = box_length;
 	};
 
 	// Destructor
-	Lattice::~Lattice() {};
+	Lattice1D::~Lattice1D() {};
 
 	/********************
 	Clear, size
 	********************/
 
-	void Lattice::clear() { this->_map.clear(); };
-	int Lattice::size() { return this->_map.size(); };
+	void Lattice1D::clear() { this->_map.clear(); };
+	int Lattice1D::size() { return this->_map.size(); };
 
 	/********************
 	Make a mol
 	********************/
 
-	std::pair<bool,SiteIt> Lattice::make_mol(Site s, Species *sp) 
+	std::pair<bool,SiteIt> Lattice1D::make_mol(Site s, Species *sp) 
 	{
 		// Check if the site is empty
 		std::pair<bool,SiteIt> spair = get_mol_it(s);
@@ -97,25 +91,17 @@ namespace Gillespie3D {
 
 		// Make
 		lattice_map::iterator it;
-		lattice_map_1::iterator it_1;
-		lattice_map_2::iterator it_2;
 		it = this->_map.find(s.x);
 		if (it == this->_map.end()) {
-			auto ret = this->_map.insert(std::make_pair(s.x,lattice_map_1()));
-			it = ret.first;
+			this->_map.insert(std::make_pair(s.x,Mol(sp)));
+		} else {
+			return std::make_pair(false,SiteIt());
 		};
-		it_1 = it->second.find(s.y);
-		if (it_1 == it->second.end()) {
-			auto ret_1 = it->second.insert(std::make_pair(s.y,lattice_map_2()));
-			it_1 = ret_1.first;
-		};
-		auto ret_2 = it_1->second.insert(std::make_pair(s.z,Mol(sp)));
-		it_2 = ret_2.first;
 
-		return std::make_pair(true,SiteIt(it,it_1,it_2));
+		return std::make_pair(true,SiteIt(it));
 	};
 
-	std::pair<bool,SiteIt> Lattice::make_mol_random(Species *sp) 
+	std::pair<bool,SiteIt> Lattice1D::make_mol_random(Species *sp) 
 	{
 		// Get a random free site
 		std::pair<bool,Site> spair = get_free_site();
@@ -134,7 +120,7 @@ namespace Gillespie3D {
 	Erase a mol
 	********************/
 
-	bool Lattice::erase_mol(Site s) 
+	bool Lattice1D::erase_mol(Site s) 
 	{
 		// Get an iterator to the site
 		std::pair<bool,SiteIt> spair = get_mol_it(s);
@@ -145,33 +131,22 @@ namespace Gillespie3D {
 		};
 	};
 
-	bool Lattice::erase_mol_it(SiteIt sit) 
+	bool Lattice1D::erase_mol_it(SiteIt sit) 
 	{
 		// Update counts on species
-		sit.it_2->second.sp->count--;
+		sit.it->second.sp->count--;
 
-		// Erase inner_2 from inner_1
-		sit.it_1->second.erase(sit.it_2);
-		if (sit.it_1->second.size() == 0)
-		{
-			// Erase inner_1 from outer
-			sit.it->second.erase(sit.it_1);
-			if (sit.it->second.size() == 0)
-			{
-				// Erase outer from map
-				this->_map.erase(sit.it);
-				return true;
-			};
-		};
-		return true; // Nonsense; it can't fail?!
+		// Erase
+		this->_map.erase(sit.it);
+		return true;
 	};
 
-	std::pair<bool,Site> Lattice::erase_mol_random(Species *sp) 
+	std::pair<bool,Site> Lattice1D::erase_mol_random(Species *sp) 
 	{
 		// Get an iterator to a random site
 		std::pair<bool,SiteIt> spair = get_mol_random_it(sp);
 		if (spair.first) {
-			Site s = Site(spair.second.it->first,spair.second.it_1->first,spair.second.it_2->first);
+			Site s = Site(spair.second.it->first);
 			bool succ = erase_mol_it(spair.second);
 			if (succ) {
 				return std::make_pair(true,s);
@@ -184,67 +159,53 @@ namespace Gillespie3D {
 	Get a mol
 	********************/
 
-	std::pair<bool,SiteIt> Lattice::get_mol_it(Site s) 
+	std::pair<bool,SiteIt> Lattice1D::get_mol_it(Site s) 
 	{
 		auto it = this->_map.find(s.x);
 		if (it != this->_map.end()) {
-			auto it_1 = it->second.find(s.y);
-			if (it_1 != it->second.end()) {
-				auto it_2 = it_1->second.find(s.z);
-				if (it_2 != it_1->second.end()) {
-					return std::make_pair(true,SiteIt(it,it_1,it_2));
-				};
-			};
+			return std::make_pair(true,SiteIt(it));
 		};
 		return std::make_pair(false,SiteIt());	
 	};
 
-	std::pair<bool,SiteIt> Lattice::get_mol_it(Site s, Species *sp) {
+	std::pair<bool,SiteIt> Lattice1D::get_mol_it(Site s, Species *sp) {
 		std::pair<bool,SiteIt> ret = get_mol_it(s);
 		if (ret.first) {
-			if (ret.second.it_2->second.sp == sp) {
+			if (ret.second.it->second.sp == sp) {
 				return ret;
 			};
 		};
 		return std::make_pair(false,SiteIt());
 	};
 
-	std::pair<bool,SiteIt> Lattice::get_mol_random_it() {
+	std::pair<bool,SiteIt> Lattice1D::get_mol_random_it() {
 		// Get random indexes to search
-		std::map<int,std::vector<int>> idxs = _get_random_idxs();
+		std::vector<int> idxs = _get_random_idxs();
 
 		// Try all sites
 		std::pair<bool,SiteIt> spair;
 		for (auto i1=0; i1 < this->_box_length; i1++) {
-			for (auto i2=0; i2 < this->_box_length; i2++) {
-				for (auto i3=0; i3 < this->_box_length; i3++) {
-					spair = get_mol_it(Site(idxs[0][i1],idxs[1][i2],idxs[2][i3]));
-					if (spair.first) 
-					{
-						return spair;
-					};
-				};
+			spair = get_mol_it(Site(idxs[i1]));
+			if (spair.first) 
+			{
+				return spair;
 			};
 		};
 		return std::make_pair(false,SiteIt());
 	};
 
-	std::pair<bool,SiteIt> Lattice::get_mol_random_it(Species *sp) 
+	std::pair<bool,SiteIt> Lattice1D::get_mol_random_it(Species *sp) 
 	{
 		// Get random indexes to search
-		std::map<int,std::vector<int>> idxs = _get_random_idxs();
+		std::vector<int> idxs = _get_random_idxs();
 
 		// Try all sites
 		std::pair<bool,SiteIt> spair;
 		for (auto i1=0; i1 < this->_box_length; i1++) {
-			for (auto i2=0; i2 < this->_box_length; i2++) {
-				for (auto i3=0; i3 < this->_box_length; i3++) {
-					spair = get_mol_it(Site(idxs[0][i1],idxs[1][i2],idxs[2][i3]),sp);
-					if (spair.first) 
-					{
-						return spair;
-					};
-				};
+			spair = get_mol_it(Site(idxs[i1]),sp);
+			if (spair.first) 
+			{
+				return spair;
 			};
 		};
 		return std::make_pair(false,SiteIt());
@@ -254,23 +215,19 @@ namespace Gillespie3D {
 	Get a free site
 	********************/
 
-	std::pair<bool,Site> Lattice::get_free_site() 
+	std::pair<bool,Site> Lattice1D::get_free_site() 
 	{
 		// Get random indexes to search
-		std::map<int,std::vector<int>> idxs = _get_random_idxs();
+		std::vector<int> idxs = _get_random_idxs();
 
 		// Try all sites
 		Site s;
 		std::pair<bool,SiteIt> spair;
 		for (auto i1=0; i1 < this->_box_length; i1++) {
-			for (auto i2=0; i2 < this->_box_length; i2++) {
-				for (auto i3=0; i3 < this->_box_length; i3++) {
-					s = Site(idxs[0][i1],idxs[1][i2],idxs[2][i3]);
-					spair = get_mol_it(s);
-					if (!(spair.first)) {
-						return std::make_pair(true,s);
-					};
-				};
+			s = Site(idxs[i1]);
+			spair = get_mol_it(s);
+			if (!(spair.first)) {
+				return std::make_pair(true,s);
 			};
 		};
 
@@ -281,7 +238,7 @@ namespace Gillespie3D {
 	Get neighbors of a site
 	********************/
 
-	std::pair<Site,std::pair<bool,SiteIt>> Lattice::get_neighbor_random(Site s)
+	std::pair<Site,std::pair<bool,SiteIt>> Lattice1D::get_neighbor_random(Site s)
 	{
 		// All neighbors
 		std::vector<Site> nbrs = _get_all_neighbors(s);
@@ -304,12 +261,12 @@ namespace Gillespie3D {
 		};
 	};
 
-	std::pair<Site,std::pair<bool,SiteIt>> Lattice::get_neighbor_random(SiteIt sit)
+	std::pair<Site,std::pair<bool,SiteIt>> Lattice1D::get_neighbor_random(SiteIt sit)
 	{
 		return get_neighbor_random(Site(sit));
 	};
 
-	std::pair<bool,Site> Lattice::get_free_neighbor_random(Site s) 
+	std::pair<bool,Site> Lattice1D::get_free_neighbor_random(Site s) 
 	{
 		// All allowed nbrs
 		std::vector<Site> nbrs = _get_all_neighbors(s);
@@ -329,7 +286,7 @@ namespace Gillespie3D {
 		return std::make_pair(false,Site());
 	};
 
-	std::pair<bool,Site> Lattice::get_free_neighbor_random(SiteIt sit) 
+	std::pair<bool,Site> Lattice1D::get_free_neighbor_random(SiteIt sit) 
 	{
 		return get_free_neighbor_random(Site(sit));
 	};
@@ -338,7 +295,7 @@ namespace Gillespie3D {
 	Get NN of species
 	********************/
 
-	int Lattice::get_nn(Species *sa, Species *sb)
+	int Lattice1D::get_nn(Species *sa, Species *sb)
 	{
 		int nn = 0;
 		// Go through all sites
@@ -346,22 +303,18 @@ namespace Gillespie3D {
 		std::pair<bool,SiteIt> spair;
 		std::vector<Site> nbrs;
 		for (auto i1=1; i1 <= this->_box_length; i1++) {
-			for (auto i2=1; i2 <= this->_box_length; i2++) {
-				for (auto i3=1; i3 <= this->_box_length; i3++) {
-					s = Site(i1,i2,i3);
-					spair = get_mol_it(s,sa);
+			s = Site(i1);
+			spair = get_mol_it(s,sa);
+			if (spair.first) {
+				// This one is species A
+				// Now search all neigbors
+				nbrs = _get_all_neighbors(s);
+				// Go through all neighbors
+				for (auto nbr: nbrs) {
+					spair = get_mol_it(nbr,sb);
 					if (spair.first) {
-						// This one is species A
-						// Now search all neigbors
-						nbrs = _get_all_neighbors(s);
-						// Go through all neighbors
-						for (auto nbr: nbrs) {
-							spair = get_mol_it(nbr,sb);
-							if (spair.first) {
-								// Ok!
-								nn++;
-							};
-						};
+						// Ok!
+						nn++;
 					};
 				};
 			};
@@ -377,16 +330,12 @@ namespace Gillespie3D {
 	Write lattice to a file
 	********************/
 
-	void Lattice::write_to_file(std::string fname) 
+	void Lattice1D::write_to_file(std::string fname) 
 	{
 		std::ofstream f;
 		f.open (fname);
 		for (auto it = this->_map.begin(); it != this->_map.end(); it++) {
-			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++) {
-				for (auto it_2 = it_1->second.begin(); it_2 != it_1->second.end(); it_2++) {
-					f << it->first << " " << it_1->first << " " << it_2->first << " " << it_2->second.sp->name << "\n";
-				};
-			};
+			f << it->first << " " << it->second.sp->name << "\n";
 		};
 		f.close();
 	};
@@ -395,7 +344,7 @@ namespace Gillespie3D {
 	Anneal
 	********************/
 
-	void Lattice::anneal(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps) {
+	void Lattice1D::anneal(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps) {
 
 		// Declarations
 
@@ -417,7 +366,7 @@ namespace Gillespie3D {
 		for (int i=0; i<n_steps; i++) {
 
 			// Pick a site to flip randomly
-			s = Site(randI(1,_box_length),randI(1,_box_length),randI(1,_box_length));
+			s = Site(randI(1,_box_length));
 
 			// Get occupied neighbors 
 			nbrs_occ.clear();
@@ -427,7 +376,7 @@ namespace Gillespie3D {
 				ret_nbr = get_mol_it(*it_nbr);
 				if (ret_nbr.first) {
 					// Occupied
-					nbrs_occ.push_back(ret_nbr.second.it_2->second.sp);
+					nbrs_occ.push_back(ret_nbr.second.it->second.sp);
 					it_nbr++;
 				} else {
 					// Empty
@@ -439,7 +388,7 @@ namespace Gillespie3D {
 			ret_site = get_mol_it(s);
 			if (ret_site.first) {
 				// Occupied, flip down
-				sp = ret_site.second.it_2->second.sp;
+				sp = ret_site.second.it->second.sp;
 				hOld = -h_dict[sp];
 				jOld = 0.0;
 				for (auto nbr: nbrs_occ) {
@@ -481,42 +430,35 @@ namespace Gillespie3D {
 
 
 	/****************************************
-	Lattice - PRIVATE
+	Lattice1D - PRIVATE
 	****************************************/
 
 	/********************
 	Get random indexes
 	********************/
 
-	std::map<int,std::vector<int>> Lattice::_get_random_idxs()
+	std::vector<int> Lattice1D::_get_random_idxs()
 	{
 		// Vectors of sites
 		std::vector<int> x1(this->_box_length);
 		std::iota(std::begin(x1), std::end(x1), 1);
-		std::vector<int> x2 = x1, x3 = x1;
 
 		// Shuffle
 		std::random_shuffle(x1.begin(),x1.end());
-		std::random_shuffle(x2.begin(),x2.end());
-		std::random_shuffle(x3.begin(),x3.end());
 
 		// Return
-		std::map<int,std::vector<int>> m;
-		m[0] = x1;
-		m[1] = x2;
-		m[2] = x3;
-		return m;
+		return x1;
 	};
 
 	/********************
 	Get all neighbors of a site
 	********************/
 
-	std::vector<Site> Lattice::_get_all_neighbors(Site s)
+	std::vector<Site> Lattice1D::_get_all_neighbors(Site s)
 	{
 		std::vector<Site> nbrs;
 
-		// 6 are possible
+		// 2 are possible
 		Site nbr_Site = s;
 
 		// x
@@ -529,26 +471,6 @@ namespace Gillespie3D {
 			nbrs.push_back(nbr_Site);
 		};
 		nbr_Site.x += 1;
-		// y
-		nbr_Site.y += 1;
-		if (nbr_Site.y <= this->_box_length) {
-			nbrs.push_back(nbr_Site);
-		};
-		nbr_Site.y -= 2;
-		if (nbr_Site.y >= 1) {
-			nbrs.push_back(nbr_Site);
-		};
-		nbr_Site.y += 1;
-		// z
-		nbr_Site.z += 1;
-		if (nbr_Site.z <= this->_box_length) {
-			nbrs.push_back(nbr_Site);
-		};
-		nbr_Site.z -= 2;
-		if (nbr_Site.z >= 1) {
-			nbrs.push_back(nbr_Site);
-		};
-		nbr_Site.z += 1;
 
 		return nbrs;
 	};

@@ -4,34 +4,33 @@
 #include <vector>
 #endif
 
+// list
+#ifndef LIST_h
+#define LIST_h
+#include <list>
+#endif
+
 // string
 #ifndef STRING_h
 #define STRING_h
 #include <string>
 #endif
 
-// Other Gillespie3D
-
-#ifndef SPECIES_h
-#define SPECIES_h
-#include "species.hpp"
-#endif
-
-#ifndef REACTIONS_h
-#define REACTIONS_h
-#include "reactions.hpp"
-#endif
+// Other Gillespie1D
 
 #ifndef LATTICE_h
 #define LATTICE_h
-#include "lattice.hpp"
+#include "lattice1d.hpp"
 #endif
 
+// Diagnostic flags
+#define DIAG_DIFFUSE 0
+
 /************************************
-* Namespace for Gillespie3D
+* Namespace for Gillespie1D
 ************************************/
 
-namespace Gillespie3D {
+namespace Gillespie1D {
 
 	/****************************************
 	General functions
@@ -41,7 +40,7 @@ namespace Gillespie3D {
 	void write_vector_to_file(std::string fname, std::vector<int> v);
 
 	// Print mvec
-	std::ostream& operator<<(std::ostream& os, const std::vector<Species>& vs);
+	std::ostream& operator<<(std::ostream& os, const std::list<Species>& vs);
 
 	/****************************************
 	Main simulation class
@@ -52,19 +51,23 @@ namespace Gillespie3D {
 	private:
 
 		// The lattice
-		Lattice _lattice;
+		Lattice1D _lattice;
 
 		// List of species
-		std::vector<Species> _species;
+		std::list<Species> _species;
 
 		// List of bimol rxns
-		std::vector<BiReaction> _bi_rxns;
+		std::list<BiReaction> _bi_rxns;
 
 		// List of unimol rxns
-		std::vector<UniReaction> _uni_rxns;
+		std::list<UniReaction> _uni_rxns;
+
+		// Box length
+		int _box_length;
 
 		// Current time
 		double _t;
+		int _t_step;
 
 		// Timestep
 		double _dt;
@@ -119,18 +122,35 @@ namespace Gillespie3D {
 		********************/
 
 		void populate_lattice(std::map<std::string,int> counts);
+		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
+
+		// Specialized functions
+		void populate_lattice_mode_1(int n);
+		void populate_lattice_mode_2(int n);
+
+		/********************
+		Do a uni reaction
+		********************/
+
+		void do_uni_rxn(UniReaction *rxn);
+
+		/********************
+		Diffuse all the mols and do bimol reactions
+		********************/
+
+		void diffuse_mols();
 
 		/********************
 		Run simulation
 		********************/
 
-		void run(int n_timesteps, bool verbose = false, bool write_statistics = false);
+		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0);
 
 		/********************
 		Write lattice
 		********************/
 
-		void write_lattice(int index);
+		void write_lattice(int index, int write_version_no);
 	};
 
 };

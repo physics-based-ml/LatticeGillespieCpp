@@ -129,6 +129,7 @@ int main() {
 	Version 4
 	********************/
 
+	/*
 	// Version	
 	int write_version_no = 4;
 
@@ -148,29 +149,35 @@ int main() {
 	double probp2 = m*kp2;
 	double probp4 = m*kp4;
 	double probm5 = m*km5;
+	*/
 
 	/****************************************
 	New
 	****************************************/
-	
-	/*
-	// Version	
-	int write_version_no = 1;
 
-	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=1.0;
+	// Version	
+	int write_version_no = 5;
+
+	counts0["A"] = 800;
+	counts0["B"] = 800;
+	counts0["C"] = 800;
+
+ 	double kp1=30.0, km1=0.25, kp2=1.0, kp3=10.0, kp4=0.6, kp5=16.5, km5=0.9;
 	// Box length
 	int box_length = 20;
 
 	// Timestep
-	double dt = 0.001;
+	double dt = 0.01;
+
+	// Number of steps to run
+	int n_steps = 1001;
 
 	// Reaction probs
-	double m = 0.15;
+	double m = 0.4;
 	double probm1 = m*km1;
 	double probp2 = m*kp2;
 	double probp4 = m*kp4;
 	double probm5 = m*km5;
-	*/
 
 	/****************************************
 	Make a simulation!

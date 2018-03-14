@@ -1,20 +1,10 @@
-#ifndef REACTIONS_h
-#define REACTIONS_h
 #include "reactions.hpp"
-#endif
-
-// Other Gillespie3D
-
-#ifndef SPECIES_h
-#define SPECIES_h
-#include "species.hpp"
-#endif
 
 /************************************
-* Namespace for Gillespie3D
+* Namespace for Gillespie1D
 ************************************/
 
-namespace Gillespie3D {
+namespace Gillespie1D {
 
 	/****************************************
 	Unireaction

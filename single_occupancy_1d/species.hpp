@@ -16,7 +16,7 @@
 #include <map>
 #endif
 
-// Other Gillespie3D
+// Other Gillespie1D
 
 #ifndef REACTIONS_h
 #define REACTIONS_h
@@ -24,17 +24,24 @@
 #endif
 
 /************************************
-* Namespace for Gillespie3D
+* Namespace for Gillespie1D
 ************************************/
 
-namespace Gillespie3D {
+namespace Gillespie1D {
+
+	/****************************************
+	General functions
+	****************************************/
+	
+	// Random numbers
+	double randD(double dMin, double dMax);
+	int randI(int iMin, int iMax);
 
 	/****************************************
 	Necessary declarations
 	****************************************/
 
 	struct Mol;
-	typedef std::vector<Mol> mvec;
 
 	/****************************************
 	Species
@@ -59,8 +66,7 @@ namespace Gillespie3D {
 		Check if any reactions are possible; if so, return a random one
 		********************/
 
-		std::pair<bool,BiReaction*> check_bi_rxns_mol(Mol &other);
-		std::pair<bool,std::pair<Mol*,BiReaction*>> check_bi_rxns_mols(mvec &other);
+		std::pair<bool,BiReaction*> check_bi_rxns_mol(Mol *other);
 
 	};	
 	// Comparator
@@ -72,15 +78,13 @@ namespace Gillespie3D {
 	
 	struct Mol {
 		Species *sp;
-		bool has_moved;
 		Mol(Species *spIn);
 
 		/********************
 		Check if any reactions are possible; if so, return a random one
 		********************/
 
-		std::pair<bool,BiReaction*> check_bi_rxns_mol(Mol &other);
-		std::pair<bool,std::pair<Mol*,BiReaction*>> check_bi_rxns_mols(mvec &other);
+		std::pair<bool,BiReaction*> check_bi_rxns_mol(Mol *other);
 	};
 	// Comparator
 	bool operator <(const Mol& a, const Mol& b);
