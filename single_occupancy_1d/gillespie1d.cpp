@@ -156,39 +156,15 @@ namespace Gillespie1D {
 	Populate lattice
 	********************/
 
-	void Simulation::populate_lattice_mode_1(int n)
-	{
-		int site=1;
-		int skip=0;
-		Species *s = _find_species("A");
-		for (int i=0; i<n; i++) {
-			this->_lattice.make_mol(site,s);
-			site++;
-			skip++;
-			if (skip==2) {
-				site++;site++;site++;site++;site++;site++;site++;site++;site++;
-				skip=0;
+	void Simulation::populate_lattice(std::map<std::string, std::vector<int> > positions) {
+		// Go through all species
+		Species *s;
+		for (auto c: positions) {
+			s = _find_species(c.first);
+			for (auto p: c.second) {
+				// Make
+				_lattice.make_mol(Site(p),s);
 			};
-		};
-	};
-	void Simulation::populate_lattice_mode_2(int n)
-	{
-		int site=1;
-		int skip=0;
-		Species *s = _find_species("A");
-		for (int i=0; i<60; i++) {
-			this->_lattice.make_mol(site,s);
-			site++;
-			skip++;
-			if (skip==6) {
-				site++;site++;site++;
-				skip=0;
-			};
-		};
-		site++;site++;site++;site++;site++;
-		for (int i=60; i<n; i++) {
-			this->_lattice.make_mol(site,s);
-			site++;site++;site++;site++;site++;
 		};
 	};
 

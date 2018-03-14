@@ -121,12 +121,9 @@ namespace Gillespie1D {
 		Populate lattice
 		********************/
 
+		void populate_lattice(std::map<std::string, std::vector<int> > positions);
 		void populate_lattice(std::map<std::string,int> counts);
 		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
-
-		// Specialized functions
-		void populate_lattice_mode_1(int n);
-		void populate_lattice_mode_2(int n);
 
 		/********************
 		Do a uni reaction
