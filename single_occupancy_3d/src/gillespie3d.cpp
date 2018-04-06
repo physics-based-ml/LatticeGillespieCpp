@@ -424,7 +424,7 @@ namespace Gillespie3D {
 		if (write_counts || write_nns || write_latt) {
 			// Clear counts
 			for (auto s: this->_species) {
-				fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/counts/" << s.name << ".txt";
+				fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
 				ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
 				ofs.close();
 				fname.str("");
@@ -435,7 +435,7 @@ namespace Gillespie3D {
 			while (it1 != this->_species.end()) {
 				it2 = it1;
 				while (it2 != this->_species.end()) {
-					fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
+					fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
 					ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
 					ofs.close();
 					fname.str("");
@@ -444,7 +444,7 @@ namespace Gillespie3D {
 				it1++;
 			};
 			// Clear lattice data
-			fname << "exec rm -r ./lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/lattice/*";
+			fname << "exec rm -r ./lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/*";
 			system(fname.str().c_str());
 			fname.str("");
 		};
@@ -468,7 +468,7 @@ namespace Gillespie3D {
 				if (write_counts) {
 					// Write counts to file
 					for (auto s: this->_species) {
-						fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/counts/" << s.name << ".txt";
+						fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
 						ofs.open(fname.str(), std::ofstream::app);
 						ofs << this->_t << " " << s.count << "\n";
 						ofs.close();
@@ -482,7 +482,7 @@ namespace Gillespie3D {
 					while (it1 != this->_species.end()) {
 						it2 = it1;
 						while (it2 != this->_species.end()) {
-							fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
+							fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
 							ofs.open(fname.str(), std::ofstream::app);
 							ofs << this->_t << " " << this->_lattice.get_nn(&(*it1),&(*it2)) << "\n";
 							ofs.close();
@@ -532,7 +532,7 @@ namespace Gillespie3D {
 	void Simulation::write_lattice(int index, int write_version_no)
 	{
 		std::stringstream fname;
-		fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
+		fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
 		this->_lattice.write_to_file(fname.str());
 		fname.str("");
 	};

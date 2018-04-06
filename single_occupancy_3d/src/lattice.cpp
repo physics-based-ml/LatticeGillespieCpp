@@ -101,8 +101,8 @@ namespace Gillespie3D {
 		// Check if the site is empty
 		std::pair<bool,SiteIt> spair = get_mol_it(s);
 		if (spair.first) {
-			// Not empty - update counts
-			spair.second.it_2->second.sp->count++;
+			// Not empty - erase
+			erase_mol_it(spair.second);
 		};
 
 		// Now make it
