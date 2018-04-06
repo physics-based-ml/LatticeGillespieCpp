@@ -118,6 +118,8 @@ namespace Gillespie3D {
 		********************/
 
 		std::pair<bool,SiteIt> make_mol(Site s, Species *sp);
+		std::pair<bool,SiteIt> replace_mol(Site s, Species *sp);
+		std::pair<bool,SiteIt> make_mol_at_empty(Site s, Species *sp);
 		std::pair<bool,SiteIt> make_mol_random(Species *sp);
 
 		/********************
@@ -165,10 +167,20 @@ namespace Gillespie3D {
 		void write_to_file(std::string fname);
 
 		/********************
-		Anneal
+		Sample
 		********************/
 
-		void anneal(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps);
+		void sample(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps);
+
+		/********************
+		Sample probabilities/propensities
+		********************/
+
+		// Sample an unnormalized probability vector
+		int sample_prop_vec(std::vector<double> &props);
+		
+		// Sample a vector of propensities (cumulative probabilities)
+		int sample_prob_vec(std::vector<double> &probs);
 	};
 
 };

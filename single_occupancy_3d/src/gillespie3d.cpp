@@ -201,7 +201,7 @@ namespace Gillespie3D {
 		};
 
 		// Now anneal
-		this->_lattice.anneal(h_dict_sp,j_dict_sp,n_steps);
+		this->_lattice.sample(h_dict_sp,j_dict_sp,n_steps);
 	};
 
 	/********************

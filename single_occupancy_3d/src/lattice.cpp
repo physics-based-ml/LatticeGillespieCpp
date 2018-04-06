@@ -3,6 +3,7 @@
 #include <fstream>
 #include <numeric>
 #include "math.h"
+#include <random>
 
 /************************************
 * Namespace for Gillespie3D
@@ -92,6 +93,23 @@ namespace Gillespie3D {
 			return std::make_pair(false,SiteIt());
 		};
 
+		return make_mol_at_empty(s,sp);
+	};
+
+	std::pair<bool,SiteIt> Lattice::replace_mol(Site s, Species *sp) 
+	{
+		// Check if the site is empty
+		std::pair<bool,SiteIt> spair = get_mol_it(s);
+		if (spair.first) {
+			// Not empty - update counts
+			spair.second.it_2->second.sp->count++;
+		};
+
+		// Now make it
+		return make_mol_at_empty(s,sp);
+	};
+	std::pair<bool,SiteIt> Lattice::make_mol_at_empty(Site s, Species *sp) {
+
 		// Update counts
 		sp->count++;
 
@@ -114,6 +132,7 @@ namespace Gillespie3D {
 
 		return std::make_pair(true,SiteIt(it,it_1,it_2));
 	};
+
 
 	std::pair<bool,SiteIt> Lattice::make_mol_random(Species *sp) 
 	{
@@ -392,93 +411,113 @@ namespace Gillespie3D {
 	};
 
 	/********************
-	Anneal
+	Sample
 	********************/
 
-	void Lattice::anneal(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps) {
+	void Lattice::sample(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps) {
+
+		// Construct a vec of all possible species
+		std::vector<Species*> sp_vec;
+		for (auto sp_pair: h_dict) {
+			sp_vec.push_back(sp_pair.first);
+		};
 
 		// Declarations
-
 		Site s;
-
-		std::pair<bool,SiteIt> ret_site;
-		Species* sp;
-
+		double energy;
+		std::vector<double> props; // propensities
+		int i_chosen;
 		std::vector<Site> nbrs;
-		std::vector<Species*> nbrs_occ;
 		std::vector<Site>::iterator it_nbr;
 		std::pair<bool,SiteIt> ret_nbr;
 
-		std::map<Species*,double>::iterator ith;
+		// Go over all steps
+		for (int i_step=0; i_step<n_steps; i_step++) {
 
-		double hOld,jOld,hNew,jNew,energy_diff;
+			// Go through all lattice sites
+			for (int i=1; i<=_box_length; i++) {
+				for (int j=1; j<=_box_length; j++) {
+					for (int k=1; k<=_box_length; k++) {
 
-		// Go through the steps
-		for (int i=0; i<n_steps; i++) {
+						// The site
+						s = Site(i,j,k);
 
-			// Pick a site to flip randomly
-			s = Site(randI(1,_box_length),randI(1,_box_length),randI(1,_box_length));
+						// Clear propensities
+						// probs.clear();
+						props.clear();
+						props.push_back(0.0);
 
-			// Get occupied neighbors 
-			nbrs_occ.clear();
-			nbrs = _get_all_neighbors(s);
-			it_nbr = nbrs.begin();
-			while (it_nbr != nbrs.end()) {
-				ret_nbr = get_mol_it(*it_nbr);
-				if (ret_nbr.first) {
-					// Occupied
-					nbrs_occ.push_back(ret_nbr.second.it_2->second.sp);
-					it_nbr++;
-				} else {
-					// Empty
-					it_nbr = nbrs.erase(it_nbr);
-				};
-			};
+						// Propensity for no spin is exp(0) = 1
+						// probs.push_back(1.0);
+						props.push_back(1.0);
+						
+						// Go through all possible species this could be, calculate propensities
+						for (auto sp_new: sp_vec) {
+							// Bias
+							energy = h_dict[sp_new];
 
-			// Check if this site is occupied
-			ret_site = get_mol_it(s);
-			if (ret_site.first) {
-				// Occupied, flip down
-				sp = ret_site.second.it_2->second.sp;
-				hOld = -h_dict[sp];
-				jOld = 0.0;
-				for (auto nbr: nbrs_occ) {
-					jOld -= j_dict[sp][nbr];
-				};
-				// New couplings
-				hNew = 0.0;
-				jNew = 0.0;
-			} else {
-				// Unoccupied, flip up
-				hOld = 0.0;
-				jOld = 0.0;
-				// Random species
-				ith = h_dict.begin();
-				std::advance(ith, randI(0,h_dict.size()-1));
-				sp = ith->first;
-				// New couplings
-				hNew = -ith->second;
-				jNew = 0.0;
-				for (auto nbr: nbrs_occ) {
-					jNew -= j_dict[sp][nbr];
-				};
-			};
+							// NNs for J 
+							nbrs = _get_all_neighbors(s);
+							it_nbr = nbrs.begin();
+							while (it_nbr != nbrs.end()) {
+								ret_nbr = get_mol_it(*it_nbr);
+								if (ret_nbr.first) {
+									// Occupied
+									energy += j_dict[sp_new][ret_nbr.second.it_2->second.sp];
+									it_nbr++;
+								} else {
+									// Empty
+									it_nbr = nbrs.erase(it_nbr);
+								};
+							};
 
-			// Energy difference
-			energy_diff = hNew + jNew - hOld - jOld;
-			if (energy_diff < 0.0 || exp(-energy_diff) > randD(0.0,1.0)) {
-				// Accept the flip!
-				if (ret_site.first) {
-					// Occupied, flip down
-					erase_mol_it(ret_site.second);
-				} else {
-					// Unoccupied, flip up
-					make_mol(s,sp);
+							// Append prob
+							// probs.push_back(exp(energy));
+							props.push_back(props.back()+exp(energy));
+						};
+
+						// Sample RV
+						i_chosen = sample_prop_vec(props);
+
+						if (i_chosen==0) {
+							// Flip down (new spin = 0)
+							erase_mol(s);
+						} else {
+							// Make the appropriate species at this site
+							replace_mol(s,sp_vec[i_chosen-1]);
+						};
+
+					};
 				};
 			};
 		};
 	};
 
+	/********************
+	Sample probabilities/propensities
+	********************/
+
+	// Sample an unnormalized probability vector
+	int Lattice::sample_prob_vec(std::vector<double> &probs) {
+		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+		std::default_random_engine generator(seed);
+		std::discrete_distribution<int> dd(probs.begin(),probs.end());
+		return dd(generator);
+	};
+
+	// Sample a vector of propensities (cumulative probabilities)
+	int Lattice::sample_prop_vec(std::vector<double> &props) {
+		// Sample RV
+		double r = randD(0.0,props.back());
+
+		// Find interval
+		for (int i=0; i<props.size()-1; i++) {
+			if (props[i] <= r && r <= props[i+1]) {
+				return i;
+			};
+		};
+		return 0; // never get here
+	};
 
 	/****************************************
 	Lattice - PRIVATE
