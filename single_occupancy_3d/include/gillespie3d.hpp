@@ -20,7 +20,7 @@
 
 #ifndef LATTICE_h
 #define LATTICE_h
-#include "lattice.hpp"
+#include "../src/lattice.hpp"
 #endif
 
 // Diagnostic flags

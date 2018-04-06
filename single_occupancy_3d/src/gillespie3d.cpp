@@ -1,4 +1,4 @@
-#include "gillespie3d.hpp"
+#include "../include/gillespie3d.hpp"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
