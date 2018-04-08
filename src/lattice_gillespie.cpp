@@ -1,4 +1,4 @@
-#include "gillespie1d.hpp"
+#include "../include/lattice_gillespie.hpp"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -8,10 +8,10 @@
 #include <fstream>
 
 /************************************
-* Namespace for Gillespie1D
+* Namespace for LatticeGillespie
 ************************************/
 
-namespace Gillespie1D {
+namespace LatticeGillespie {
 
 	/****************************************
 	General functions
@@ -44,17 +44,103 @@ namespace Gillespie1D {
 	********************/
 
 	// Constructors
-	Simulation::Simulation(double dt, int box_length) : _lattice(box_length)
+	Simulation::Simulation(double dt, int box_length, int dim)
 	{
-		this->_uni_next = nullptr;
-		this->_t = 0.0;
-		this->_t_step = 0;
-		this->_dt = dt;
-		this->_box_length = box_length;
+		_dim = dim;
+		// Make lattice
+		if (_dim == 1) {
+			_lattice = new Lattice(box_length);
+		} else if (_dim == 2) {
+			_lattice = new Lattice(box_length,box_length);
+		} else if (_dim == 3) {
+			_lattice = new Lattice(box_length,box_length,box_length);
+		} else {
+			std::cerr << "ERROR: only lattice dimensions 1,2,3 are supported" << std::endl;
+			exit(EXIT_FAILURE);
+		};
+
+		_uni_next = nullptr;
+		_t = 0.0;
+		_t_step = 0;
+		_dt = dt;
+		_box_length = box_length;
 	};
 
+	Simulation::Simulation(const Simulation& other) {
+		_copy(other);
+	};
+	Simulation::Simulation(Simulation&& other) {
+		_copy(other);
+		other._reset();
+	};
+	Simulation& Simulation::operator=(const Simulation& other) {
+		if (this != &other) {
+			_clean_up();
+			_copy(other);
+		};
+		return *this;
+	};
+    Simulation& Simulation::operator=(Simulation&& other) {
+		if (this != &other) {
+			_clean_up();
+			_copy(other);
+			other._reset();
+		};
+		return *this;
+    };
+
 	// Destructor
-	Simulation::~Simulation() {};
+	Simulation::~Simulation() {
+		_clean_up();
+	};
+
+	// Helpers
+	void Simulation::_clean_up() {
+		if (_lattice != nullptr) {
+			delete _lattice;
+		};
+	};
+	void Simulation::_copy(const Simulation& other) {
+		_dim = other._dim;
+		_box_length = other._box_length;
+		_lattice = new Lattice(*(other._lattice));
+		_species = other._species;
+		_bi_rxns = other._bi_rxns;
+		_uni_rxns = other._uni_rxns;
+		_t = other._t;
+		_t_step = other._t_step;
+		_dt = other._dt;
+		_t_uni_next = other._t_uni_next;
+		if (other._uni_next == nullptr) {
+			_uni_next = nullptr;
+		} else {
+			// Search...
+			for (auto it = _uni_rxns.begin(); it != _uni_rxns.end(); it++) {
+				if (it->name == other._uni_next->name) {
+					_uni_next = &(*it);
+					break;
+				};
+			};
+			// Can't find?
+			if (_uni_next == nullptr) {
+				std::cerr << "Error: can't find uni reaction when copying" << std::endl;
+				exit(EXIT_FAILURE);
+			};
+		};
+	};
+	void Simulation::_reset() {
+		_dim = 3;
+		_lattice = nullptr;
+		_species.clear();
+		_bi_rxns.clear();
+		_uni_rxns.clear();
+		_box_length = 0;
+		_t = 0.0;
+		_t_step = 0;
+		_dt = 0.0;
+		_t_uni_next = 0.0;
+		_uni_next = nullptr;
+	};
 
 	/********************
 	Add a species
@@ -156,18 +242,6 @@ namespace Gillespie1D {
 	Populate lattice
 	********************/
 
-	void Simulation::populate_lattice(std::map<std::string, std::vector<int> > positions) {
-		// Go through all species
-		Species *s;
-		for (auto c: positions) {
-			s = _find_species(c.first);
-			for (auto p: c.second) {
-				// Make
-				_lattice.make_mol(Site(p),s);
-			};
-		};
-	};
-
 	void Simulation::populate_lattice(std::map<std::string,int> counts) {
 	    // Go through all species
 		Species *s;
@@ -177,7 +251,7 @@ namespace Gillespie1D {
 	    	for (auto i=0; i<c.second; i++) 
 	    	{
 	    		// Make
-		    	this->_lattice.make_mol_random(s);	
+		    	_lattice->make_mol_random(s);	
 	    	};
 		};
 	};
@@ -186,10 +260,10 @@ namespace Gillespie1D {
 		// Start by populating lattice randomly
 
 		// Random number of initial particles (min is 1, max is box vol)
-		int n = randI(1, _box_length);
+		int n = randI(1, _box_length*_box_length*_box_length);
 
 		// Random initial counts
-		int n_possible = _box_length;
+		int n_possible = pow(_box_length,3);
 		std::map<std::string,int> counts0;
 		for (auto hpr : h_dict) {
 			counts0[hpr.first] = randI(0,n_possible);
@@ -212,8 +286,8 @@ namespace Gillespie1D {
 			};
 		};
 
-		// Now anneal
-		this->_lattice.anneal(h_dict_sp,j_dict_sp,n_steps);
+		// Now sample
+		_lattice->sample(h_dict_sp,j_dict_sp,n_steps);
 	};
 
 	/********************
@@ -223,10 +297,10 @@ namespace Gillespie1D {
 	void Simulation::do_uni_rxn(UniReaction *rxn) {
 
 		// Declarations
-		std::pair<bool,SiteIt> get_it;
-		SiteIt sit;
-		Site s,snbr;
-		std::pair<bool,Site> free_pair;
+		std::pair<bool,SiteIt3D> get_it;
+		SiteIt3D sit;
+		Site3D s,snbr;
+		std::pair<bool,Site3D> free_pair;
 
 		// Try to do the reaction at several sites
 		// Failure can arise if there is not enough room for the products
@@ -234,17 +308,17 @@ namespace Gillespie1D {
 		while (ctr < 20) {
 
 			// Grab a random site
-			get_it = this->_lattice.get_mol_random_it(rxn->r);
+			get_it = _lattice->get_mol_random_it(rxn->r);
 			if (!(get_it.first)) {
 				// No sites with this species exist; stop
 				return;
 			};
 			sit = get_it.second;
-			s = Site(sit);
+			s = Site3D(sit);
 
 			// Check if there is room for the products
 			if (rxn->p.size() == 2) {
-				free_pair = this->_lattice.get_free_neighbor_random(sit);
+				free_pair = _lattice->get_free_neighbor_random(sit);
 				if (!(free_pair.first)) {
 					// Not enough room for the two products; try again with a different random site
 					ctr += 1;
@@ -255,26 +329,26 @@ namespace Gillespie1D {
 			};
 
 			// Remove the reactant
-			this->_lattice.erase_mol_it(sit);
+			_lattice->erase_mol_it(sit);
 
 			// Conserve reactants
 			if (rxn->r->conserved) {
-				this->_lattice.make_mol_random(rxn->r);
+				_lattice->make_mol_random(rxn->r);
 			};
 
 			// Place products, if needed at the neighbor site
 			if (rxn->p.size() == 1) {
-				this->_lattice.make_mol(s, rxn->p[0]);
+				_lattice->make_mol(s, rxn->p[0]);
 			} else if (rxn->p.size() == 2) {
-				this->_lattice.make_mol(s, rxn->p[0]);
-				this->_lattice.make_mol(snbr, rxn->p[1]);
+				_lattice->make_mol(s, rxn->p[0]);
+				_lattice->make_mol(snbr, rxn->p[1]);
 			};
 
 			// Conserve products
 			for (auto p: rxn->p)
 			{
 				if (p->conserved) {
-					this->_lattice.erase_mol_random(p);
+					_lattice->erase_mol_random(p);
 				};
 			};
 
@@ -290,24 +364,24 @@ namespace Gillespie1D {
 	void Simulation::diffuse_mols() 
 	{
 		// Copy the old map
-		Lattice1D todo = this->_lattice;
+		Lattice *todo = new Lattice(*_lattice);
 
 		// Clear the current lattice
-		this->_lattice.clear();
+		_lattice->clear();
 
 		// Declarations needed
-		std::pair<bool,SiteIt> old_pair;
-		SiteIt sOldIt,sNewIt;
-		Site sNew,sOld;
+		std::pair<bool,SiteIt3D> old_pair;
+		SiteIt3D sOldIt,sNewIt;
+		Site3D sNew,sOld;
 		Mol *mOld,*mColl;
-		std::pair<Site,std::pair<bool,SiteIt>> nbr_pair;
+		std::pair<Site3D,std::pair<bool,SiteIt3D>> nbr_pair;
 		bool occ_todo, occ_done;
-		std::pair<bool,SiteIt> coll_done_pair;
+		std::pair<bool,SiteIt3D> coll_done_pair;
 		std::pair<bool,BiReaction*> rxn_pair;
 		BiReaction *rxn; 
 
 		// Go over all mols to move
-		while (todo.size() > 0) {
+		while (todo->size() > 0) {
 
 			if (DIAG_DIFFUSE) { std::cout << std::endl; };
 
@@ -316,15 +390,15 @@ namespace Gillespie1D {
 			occ_done = false;
 
 			// Grab some element
-			old_pair = todo.get_mol_random_it();
+			old_pair = todo->get_mol_random_it();
 
 			sOldIt = old_pair.second;
-			mOld = &(sOldIt.it->second);
+			mOld = &(sOldIt.it_1D->second);
 
 			if (DIAG_DIFFUSE) { std::cout << "diffuse_mols: got element..." << std::flush; };
 
 			// Move
-			nbr_pair = todo.get_neighbor_random(sOldIt);
+			nbr_pair = todo->get_neighbor_random(sOldIt);
 			sNew = nbr_pair.first;
 
 			if (DIAG_DIFFUSE) { std::cout << "got neighbor..." << std::flush; };
@@ -334,15 +408,15 @@ namespace Gillespie1D {
 			if (occ_todo) {
 				// Yes; its collided with something in the todo pile
 				sNewIt = nbr_pair.second.second;
-				mColl = &(sNewIt.it->second);
+				mColl = &(sNewIt.it_1D->second);
 			} else {
 				// No; check if it's collided with something in the done pile
-				coll_done_pair = this->_lattice.get_mol_it(sNew);
+				coll_done_pair = _lattice->get_mol_it(sNew);
 				occ_done = coll_done_pair.first;
 				if (occ_done) {
 					// Yes; its collided with something in the done pile
 					sNewIt = coll_done_pair.second;
-					mColl = &(sNewIt.it->second);
+					mColl = &(sNewIt.it_1D->second);
 				};
 			};
 
@@ -351,9 +425,9 @@ namespace Gillespie1D {
 			// If unoccupied, just commit the move (diffuse)
 			if (!occ_todo && !occ_done) {
 				// Move
-				this->_lattice.make_mol(sNew, mOld->sp);
+				_lattice->make_mol(sNew, mOld->sp);
 				// Continue
-				todo.erase_mol_it(sOldIt);
+				todo->erase_mol_it(sOldIt);
 				continue;
 			};
 
@@ -365,9 +439,9 @@ namespace Gillespie1D {
 			// No reaction occurred?
 			if (!(rxn_pair.first)) {
 				// No reaction & don't move
-				this->_lattice.make_mol(Site(sOldIt), mOld->sp);
+				_lattice->make_mol(Site3D(sOldIt), mOld->sp);
 				// Continue
-				todo.erase_mol_it(sOldIt);
+				todo->erase_mol_it(sOldIt);
 				continue;
 			};
 
@@ -378,33 +452,33 @@ namespace Gillespie1D {
 			if (DIAG_DIFFUSE) { std::cout << "rxn occurred..." << std::flush; };
 
 			// Remove the reactants
-			sOld = Site(sOldIt); // grab it before it's erased
-			todo.erase_mol_it(sOldIt);
+			sOld = Site3D(sOldIt); // grab it before it's erased
+			todo->erase_mol_it(sOldIt);
 			if (occ_todo) { 
 				// Note: the old iterator sNewIt has been invalidated :(
-				todo.erase_mol(sNew);
+				todo->erase_mol(sNew);
 			} else if (occ_done) { 
-				this->_lattice.erase_mol(sNewIt); 
+				_lattice->erase_mol(sNewIt); 
 			};
 
 			if (DIAG_DIFFUSE) { std::cout << "removed r..." << std::flush; };
 
 			// Conserve reactants
 			if (rxn->r1->conserved) {
-				this->_lattice.make_mol_random(rxn->r1);
+				_lattice->make_mol_random(rxn->r1);
 			};
 			if (rxn->r2->conserved) {
-				this->_lattice.make_mol_random(rxn->r2);
+				_lattice->make_mol_random(rxn->r2);
 			};
 
 			if (DIAG_DIFFUSE) { std::cout << "conserved r..." << std::flush; };
 
 			// Place products, if needed at the old site
 			if (rxn->p.size() == 1) {
-				this->_lattice.make_mol(sNew, rxn->p[0]);
+				_lattice->make_mol(sNew, rxn->p[0]);
 			} else if (rxn->p.size() == 2) {
-				this->_lattice.make_mol(sNew, rxn->p[0]);
-				this->_lattice.make_mol(sOld, rxn->p[1]);
+				_lattice->make_mol(sNew, rxn->p[0]);
+				_lattice->make_mol(sOld, rxn->p[1]);
 			};
 
 			if (DIAG_DIFFUSE) { std::cout << "added p..." << std::flush; };
@@ -413,7 +487,7 @@ namespace Gillespie1D {
 			for (auto p: rxn->p)
 			{
 				if (p->conserved) {
-					this->_lattice.erase_mol_random(p);
+					_lattice->erase_mol_random(p);
 				};
 			};
 
@@ -421,6 +495,9 @@ namespace Gillespie1D {
 
 			// Finished
 		};
+
+		// Clear old
+		delete todo;
 	};
 
 
@@ -436,7 +513,7 @@ namespace Gillespie1D {
 		if (write_counts || write_nns || write_latt) {
 			// Clear counts
 			for (auto s: this->_species) {
-				fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/counts/" << s.name << ".txt";
+				fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
 				ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
 				ofs.close();
 				fname.str("");
@@ -447,7 +524,7 @@ namespace Gillespie1D {
 			while (it1 != this->_species.end()) {
 				it2 = it1;
 				while (it2 != this->_species.end()) {
-					fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
+					fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
 					ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
 					ofs.close();
 					fname.str("");
@@ -456,7 +533,7 @@ namespace Gillespie1D {
 				it1++;
 			};
 			// Clear lattice data
-			fname << "exec rm -r ./lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/lattice/*";
+			fname << "exec rm -r ./lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/*";
 			system(fname.str().c_str());
 			fname.str("");
 		};
@@ -480,7 +557,7 @@ namespace Gillespie1D {
 				if (write_counts) {
 					// Write counts to file
 					for (auto s: this->_species) {
-						fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/counts/" << s.name << ".txt";
+						fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
 						ofs.open(fname.str(), std::ofstream::app);
 						ofs << this->_t << " " << s.count << "\n";
 						ofs.close();
@@ -494,9 +571,9 @@ namespace Gillespie1D {
 					while (it1 != this->_species.end()) {
 						it2 = it1;
 						while (it2 != this->_species.end()) {
-							fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
+							fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
 							ofs.open(fname.str(), std::ofstream::app);
-							ofs << this->_t << " " << this->_lattice.get_nn(&(*it1),&(*it2)) << "\n";
+							ofs << this->_t << " " << _lattice->get_nn(&(*it1),&(*it2)) << "\n";
 							ofs.close();
 							fname.str("");
 							it2++;
@@ -544,8 +621,8 @@ namespace Gillespie1D {
 	void Simulation::write_lattice(int index, int write_version_no)
 	{
 		std::stringstream fname;
-		fname << "lattice_v" << std::setfill('0') << std::setw(2) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
-		this->_lattice.write_to_file(fname.str());
+		fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
+		_lattice->write_to_file(fname.str());
 		fname.str("");
 	};
 

@@ -16,7 +16,7 @@
 #include <string>
 #endif
 
-// Other Gillespie3D
+// Other LatticeGillespie
 
 #ifndef LATTICE_h
 #define LATTICE_h
@@ -27,10 +27,10 @@
 #define DIAG_DIFFUSE 0
 
 /************************************
-* Namespace for Gillespie3D
+* Namespace for LatticeGillespie
 ************************************/
 
-namespace Gillespie3D {
+namespace LatticeGillespie {
 
 	/****************************************
 	General functions
@@ -50,8 +50,11 @@ namespace Gillespie3D {
 	{
 	private:
 
+		// The dimensionality of the lattice
+		int _dim;
+
 		// The lattice
-		Lattice _lattice;
+		Lattice *_lattice;
 
 		// List of species
 		std::list<Species> _species;
@@ -88,13 +91,22 @@ namespace Gillespie3D {
 
 		void _schedule_uni();
 
+		// Constructor helpers
+		void _clean_up();
+		void _copy(const Simulation& other);
+		void _reset();
+
 	public:
 
 		/********************
 		Constructor/Destructor
 		********************/
 
-		Simulation(double dt, int box_length);
+		Simulation(double dt, int box_length, int dim=3);
+		Simulation(const Simulation& other);
+		Simulation(Simulation&& other);
+		Simulation& operator=(const Simulation& other);
+	    Simulation& operator=(Simulation&& other);
 		~Simulation();
 
 		/********************

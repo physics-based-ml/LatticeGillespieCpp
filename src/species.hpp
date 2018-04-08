@@ -16,7 +16,7 @@
 #include <map>
 #endif
 
-// Other Gillespie3D
+// Other LatticeGillespie
 
 #ifndef REACTIONS_h
 #define REACTIONS_h
@@ -24,10 +24,10 @@
 #endif
 
 /************************************
-* Namespace for Gillespie3D
+* Namespace for LatticeGillespie
 ************************************/
 
-namespace Gillespie3D {
+namespace LatticeGillespie {
 
 	/****************************************
 	General functions

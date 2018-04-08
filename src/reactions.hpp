@@ -11,10 +11,10 @@
 #endif
 
 /************************************
-* Namespace for Gillespie1D
+* Namespace for LatticeGillespie
 ************************************/
 
-namespace Gillespie1D {
+namespace LatticeGillespie {
 
 	/****************************************
 	Necessary declarations

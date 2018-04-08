@@ -1,10 +1,10 @@
 #include "reactions.hpp"
 
 /************************************
-* Namespace for Gillespie3D
+* Namespace for LatticeGillespie
 ************************************/
 
-namespace Gillespie3D {
+namespace LatticeGillespie {
 
 	/****************************************
 	Unireaction

@@ -7,14 +7,14 @@ CXXFLAGS = -std=c++14 -fPIC -O3
 # linking flags
 LDFLAGS = -shared
 # target lib
-TARGET_LIB = lib/libgillespie3d.so
+TARGET_LIB = lib/liblatticegillespie.so
 # build dir
 BUILD_DIR = build
 # source dir
 SOURCE_DIR = src
 
 # source files
-SRC_NAMES = gillespie3d.cpp lattice.cpp reactions.cpp species.cpp
+SRC_NAMES = lattice_gillespie.cpp lattice.cpp reactions.cpp species.cpp
 SRCS = $(addprefix $(SOURCE_DIR)/, $(SRC_NAMES))
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRC_NAMES:.cpp=.o))
 DEPS = $(OBJS:.o=.d)
