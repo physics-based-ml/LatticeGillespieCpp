@@ -532,11 +532,6 @@ namespace LatticeGillespie {
 	Sample
 	********************/
 
-	void Lattice::sample(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps) {
-		std::map<Species*, std::map<Species*, std::map<Species*,double>>> k_dict;
-		sample(h_dict,j_dict,k_dict,n_steps);
-	};
-
 	void Lattice::sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, int n_steps) {
 
 		// Construct a vec of all possible species

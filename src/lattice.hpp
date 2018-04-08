@@ -180,8 +180,6 @@ namespace LatticeGillespie {
 		Sample
 		********************/
 
-		void sample(std::map<Species*,double> &h_dict,std::map<Species*,std::map<Species*,double>> &j_dict, int n_steps);
-
 		void sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, int n_steps);
 
 		/********************

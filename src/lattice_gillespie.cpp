@@ -257,13 +257,18 @@ namespace LatticeGillespie {
 	};
 
 	void Simulation::populate_lattice(std::map<std::string,double> &h_dict,std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
+		std::map<std::string,std::map<std::string,std::map<std::string,double>>> k_dict;
+		populate_lattice(h_dict,j_dict,k_dict,n_steps);
+	};
+
+	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
 		// Start by populating lattice randomly
 
 		// Random number of initial particles (min is 1, max is box vol)
-		int n = randI(1, _box_length*_box_length*_box_length);
+		int n = randI(1, pow(_box_length,_dim));
 
 		// Random initial counts
-		int n_possible = pow(_box_length,3);
+		int n_possible = pow(_box_length,_dim);
 		std::map<std::string,int> counts0;
 		for (auto hpr : h_dict) {
 			counts0[hpr.first] = randI(0,n_possible);
@@ -276,7 +281,8 @@ namespace LatticeGillespie {
 
 		// Convert the strings into species
 		std::map<Species*, double> h_dict_sp;
-		std::map<Species*,std::map<Species*,double> > j_dict_sp;
+		std::map<Species*,std::map<Species*,double>> j_dict_sp;
+		std::map<Species*,std::map<Species*,std::map<Species*,double>>> k_dict_sp;
 		for (auto hpr: h_dict) {
 			h_dict_sp[_find_species(hpr.first)] = hpr.second;
 		};
@@ -285,9 +291,16 @@ namespace LatticeGillespie {
 				j_dict_sp[_find_species(jpr1.first)][_find_species(jpr2.first)] = jpr2.second;
 			};
 		};
+		for (auto kpr1: k_dict) {
+			for (auto kpr2: kpr1.second) {
+				for (auto kpr3: kpr2.second) {
+					k_dict_sp[_find_species(kpr1.first)][_find_species(kpr2.first)][_find_species(kpr3.first)] = kpr3.second;
+				};
+			};
+		};
 
 		// Now sample
-		_lattice->sample(h_dict_sp,j_dict_sp,n_steps);
+		_lattice->sample(h_dict_sp,j_dict_sp,k_dict_sp,n_steps);
 	};
 
 	/********************
