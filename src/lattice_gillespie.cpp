@@ -7,6 +7,13 @@
 #include <math.h>
 #include <fstream>
 
+// Other LatticeGillespie
+
+#ifndef LATTICE_h
+#define LATTICE_h
+#include "lattice.hpp"
+#endif
+
 /************************************
 * Namespace for LatticeGillespie
 ************************************/
@@ -36,7 +43,125 @@ namespace LatticeGillespie {
 	};
 
 	/****************************************
-	Main simulation
+	Main simulation IMPLEMENTATION HEADER
+	****************************************/
+
+	class Simulation::Impl
+	{
+	private:
+
+		// The dimensionality of the lattice
+		int _dim;
+
+		// The lattice
+		Lattice *_lattice;
+
+		// List of species
+		std::list<Species> _species;
+
+		// List of bimol rxns
+		std::list<BiReaction> _bi_rxns;
+
+		// List of unimol rxns
+		std::list<UniReaction> _uni_rxns;
+
+		// Box length
+		int _box_length;
+
+		// Current time
+		double _t;
+		int _t_step;
+
+		// Timestep
+		double _dt;
+
+		// Time and value of the next unimolecular reaction
+		double _t_uni_next;
+		UniReaction *_uni_next; // Null indicates there is none scheduled
+
+		/********************
+		Find a species by name
+		********************/
+
+		Species* _find_species(std::string name);
+
+		/********************
+		Schedule the next uni reaction
+		********************/
+
+		void _schedule_uni();
+
+		// Constructor helpers
+		void _clean_up();
+		void _copy(const Impl& other);
+		void _reset();
+
+	public:
+
+		/********************
+		Constructor/Destructor
+		********************/
+
+		Impl(double dt, int box_length, int dim);
+		Impl(Impl&& other);
+	    Impl& operator=(Impl&& other);
+		~Impl();
+
+		/********************
+		Add species
+		********************/
+
+		void add_species(std::string name, bool conserved = false);
+
+		/********************
+		 Add a reaction
+		********************/
+
+		// Unimolecular rxn
+		void add_uni_rxn(std::string name, double kr, std::string r);
+		void add_uni_rxn(std::string name, double kr, std::string r, std::string p);
+		void add_uni_rxn(std::string name, double kr, std::string r, std::string p1, std::string p2);
+
+		// Bimolecular rxn
+		void add_bi_rxn(std::string name, double prob, std::string r1, std::string r2);
+		void add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p);
+		void add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p1, std::string p2);
+
+		/********************
+		Populate lattice
+		********************/
+
+		void populate_lattice(std::map<std::string,int> counts);
+		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
+		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps);
+
+		/********************
+		Do a uni reaction
+		********************/
+
+		void do_uni_rxn(UniReaction *rxn);
+
+		/********************
+		Diffuse all the mols and do bimol reactions
+		********************/
+
+		void diffuse_mols();
+
+		/********************
+		Run simulation
+		********************/
+
+		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0);
+
+		/********************
+		Write lattice
+		********************/
+
+		void write_lattice(int index, int write_version_no);
+	};
+
+	/****************************************
+	Main simulation IMPLEMENTATION DEFINITIONS
 	****************************************/
 
 	/********************
@@ -44,7 +169,7 @@ namespace LatticeGillespie {
 	********************/
 
 	// Constructors
-	Simulation::Simulation(double dt, int box_length, int dim)
+	Simulation::Impl::Impl(double dt, int box_length, int dim)
 	{
 		_dim = dim;
 		// Make lattice
@@ -66,21 +191,11 @@ namespace LatticeGillespie {
 		_box_length = box_length;
 	};
 
-	Simulation::Simulation(const Simulation& other) {
-		_copy(other);
-	};
-	Simulation::Simulation(Simulation&& other) {
+	Simulation::Impl::Impl(Impl&& other) {
 		_copy(other);
 		other._reset();
 	};
-	Simulation& Simulation::operator=(const Simulation& other) {
-		if (this != &other) {
-			_clean_up();
-			_copy(other);
-		};
-		return *this;
-	};
-    Simulation& Simulation::operator=(Simulation&& other) {
+    Simulation::Impl& Simulation::Impl::operator=(Impl&& other) {
 		if (this != &other) {
 			_clean_up();
 			_copy(other);
@@ -90,17 +205,17 @@ namespace LatticeGillespie {
     };
 
 	// Destructor
-	Simulation::~Simulation() {
+	Simulation::Impl::~Impl() {
 		_clean_up();
 	};
 
 	// Helpers
-	void Simulation::_clean_up() {
+	void Simulation::Impl::_clean_up() {
 		if (_lattice != nullptr) {
 			delete _lattice;
 		};
 	};
-	void Simulation::_copy(const Simulation& other) {
+	void Simulation::Impl::_copy(const Impl& other) {
 		_dim = other._dim;
 		_box_length = other._box_length;
 		_lattice = new Lattice(*(other._lattice));
@@ -128,7 +243,7 @@ namespace LatticeGillespie {
 			};
 		};
 	};
-	void Simulation::_reset() {
+	void Simulation::Impl::_reset() {
 		_dim = 3;
 		_lattice = nullptr;
 		_species.clear();
@@ -146,7 +261,7 @@ namespace LatticeGillespie {
 	Add a species
 	********************/
 
-	void Simulation::add_species(std::string name, bool conserved) {
+	void Simulation::Impl::add_species(std::string name, bool conserved) {
 		// Add
 		this->_species.push_back(Species(name,conserved));
 		auto itu = this->_uni_rxns.begin();
@@ -166,7 +281,7 @@ namespace LatticeGillespie {
 	********************/
 
 	// Unimolecular rxn
-	void Simulation::add_uni_rxn(std::string name, double kr, std::string r) {
+	void Simulation::Impl::add_uni_rxn(std::string name, double kr, std::string r) {
 		// Find the species
 		Species *sr = _find_species(r);
 		// Make the reaction
@@ -176,7 +291,7 @@ namespace LatticeGillespie {
 			species->add_rxn(&(this->_uni_rxns.back()));
 		};
 	};
-	void Simulation::add_uni_rxn(std::string name, double kr, std::string r, std::string p) {
+	void Simulation::Impl::add_uni_rxn(std::string name, double kr, std::string r, std::string p) {
 		// Find the species
 		Species *sr = _find_species(r);
 		Species *sp = _find_species(p);
@@ -187,7 +302,7 @@ namespace LatticeGillespie {
 			species->add_rxn(&(this->_uni_rxns.back()));
 		};
 	};
-	void Simulation::add_uni_rxn(std::string name, double kr, std::string r, std::string p1, std::string p2) {
+	void Simulation::Impl::add_uni_rxn(std::string name, double kr, std::string r, std::string p1, std::string p2) {
 		// Find the species
 		Species *sr = _find_species(r);
 		Species *sp1 = _find_species(p1);
@@ -201,7 +316,7 @@ namespace LatticeGillespie {
 	};
 
 	// Bimolecular rxn
-	void Simulation::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2) {
+	void Simulation::Impl::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2) {
 		// Find the species
 		Species *sr1 = _find_species(r1);
 		Species *sr2 = _find_species(r2);
@@ -212,7 +327,7 @@ namespace LatticeGillespie {
 			species->add_rxn(&(this->_bi_rxns.back()));
 		};
 	};
-	void Simulation::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p) {
+	void Simulation::Impl::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p) {
 		// Find the species
 		Species *sr1 = _find_species(r1);
 		Species *sr2 = _find_species(r2);
@@ -224,7 +339,7 @@ namespace LatticeGillespie {
 			species->add_rxn(&(this->_bi_rxns.back()));
 		};
 	};
-	void Simulation::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p1, std::string p2) {
+	void Simulation::Impl::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p1, std::string p2) {
 		// Find the species
 		Species *sr1 = _find_species(r1);
 		Species *sr2 = _find_species(r2);
@@ -242,7 +357,7 @@ namespace LatticeGillespie {
 	Populate lattice
 	********************/
 
-	void Simulation::populate_lattice(std::map<std::string,int> counts) {
+	void Simulation::Impl::populate_lattice(std::map<std::string,int> counts) {
 	    // Go through all species
 		Species *s;
 		for (auto c: counts) 
@@ -256,12 +371,12 @@ namespace LatticeGillespie {
 		};
 	};
 
-	void Simulation::populate_lattice(std::map<std::string,double> &h_dict,std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
+	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict,std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
 		std::map<std::string,std::map<std::string,std::map<std::string,double>>> k_dict;
 		populate_lattice(h_dict,j_dict,k_dict,n_steps);
 	};
 
-	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
+	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
 		// Start by populating lattice randomly
 
 		// Random number of initial particles (min is 1, max is box vol)
@@ -307,7 +422,7 @@ namespace LatticeGillespie {
 	Do a uni reaction
 	********************/
 
-	void Simulation::do_uni_rxn(UniReaction *rxn) {
+	void Simulation::Impl::do_uni_rxn(UniReaction *rxn) {
 
 		// Declarations
 		std::pair<bool,SiteIt3D> get_it;
@@ -374,7 +489,7 @@ namespace LatticeGillespie {
 	Diffuse all the mols and do bimol reactions
 	********************/
 
-	void Simulation::diffuse_mols() 
+	void Simulation::Impl::diffuse_mols() 
 	{
 		// Copy the old map
 		Lattice *todo = new Lattice(*_lattice);
@@ -518,7 +633,7 @@ namespace LatticeGillespie {
 	Run simulation
 	********************/
 
-	void Simulation::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no)
+	void Simulation::Impl::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no)
 	{
 		// Clear data in files if writing
 		std::ofstream ofs;
@@ -631,7 +746,7 @@ namespace LatticeGillespie {
 	Write lattice
 	********************/
 
-	void Simulation::write_lattice(int index, int write_version_no)
+	void Simulation::Impl::write_lattice(int index, int write_version_no)
 	{
 		std::stringstream fname;
 		fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
@@ -647,7 +762,7 @@ namespace LatticeGillespie {
 	Find a species by name
 	********************/
 
-	Species* Simulation::_find_species(std::string name) {
+	Species* Simulation::Impl::_find_species(std::string name) {
 		// Go through the species
 		auto it = this->_species.begin();
 		while (it != this->_species.end()) {
@@ -663,7 +778,7 @@ namespace LatticeGillespie {
 	Schedule the next uni reaction
 	********************/
 
-	void Simulation::_schedule_uni() {
+	void Simulation::Impl::_schedule_uni() {
 		double props_cum = 0.0;
 		std::vector<double> props;
 		props.push_back(0.0);
@@ -694,5 +809,82 @@ namespace LatticeGillespie {
 
 		// Time of next reaction
 		this->_t_uni_next = this->_t + log(1.0/randD(0.0,1.0))/props_cum;
+	};
+
+	/****************************************
+	Main simulation IMPL forwards
+	****************************************/
+
+	/********************
+	Constructor/Destructor
+	********************/
+
+	Simulation::Simulation(double dt, int box_length, int dim) : _impl(new Impl(dt,box_length,dim)) {};
+	Simulation::Simulation(Simulation&& other) = default; // movable but no copies
+    Simulation& Simulation::operator=(Simulation&& other) = default; // movable but no copies
+	Simulation::~Simulation() = default;
+
+	/********************
+	Add species
+	********************/
+
+	void Simulation::add_species(std::string name, bool conserved) {
+		_impl->add_species(name,conserved);
+	};
+
+	/********************
+	 Add a reaction
+	********************/
+
+	// Unimolecular rxn
+	void Simulation::add_uni_rxn(std::string name, double kr, std::string r) {
+		_impl->add_uni_rxn(name,kr,r);
+	};
+	void Simulation::add_uni_rxn(std::string name, double kr, std::string r, std::string p) {
+		_impl->add_uni_rxn(name,kr,r,p);
+	};
+	void Simulation::add_uni_rxn(std::string name, double kr, std::string r, std::string p1, std::string p2) {
+		_impl->add_uni_rxn(name,kr,r,p1,p2);
+	};
+
+	// Bimolecular rxn
+	void Simulation::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2) {
+		_impl->add_bi_rxn(name,prob,r1,r2);
+	};
+	void Simulation::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p) {
+		_impl->add_bi_rxn(name,prob,r1,r2,p);
+	};
+	void Simulation::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p1, std::string p2) {
+		_impl->add_bi_rxn(name,prob,r1,r2,p1,p2);
+	};
+
+	/********************
+	Populate lattice
+	********************/
+
+	void Simulation::populate_lattice(std::map<std::string,int> counts) {
+		_impl->populate_lattice(counts);
+	};
+	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
+		_impl->populate_lattice(h_dict,j_dict,n_steps);
+	};
+	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
+		_impl->populate_lattice(h_dict,j_dict,k_dict,n_steps);
+	};
+
+	/********************
+	Run simulation
+	********************/
+
+	void Simulation::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no) {
+		_impl->run(n_timesteps,verbose,write_counts,write_nns,write_latt,write_step,write_version_no);
+	};
+
+	/********************
+	Write lattice
+	********************/
+
+	void Simulation::write_lattice(int index, int write_version_no) {
+		_impl->write_lattice(index,write_version_no);
 	};
 };

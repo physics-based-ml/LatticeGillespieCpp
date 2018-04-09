@@ -16,11 +16,10 @@
 #include <string>
 #endif
 
-// Other LatticeGillespie
-
-#ifndef LATTICE_h
-#define LATTICE_h
-#include "../src/lattice.hpp"
+// map
+#ifndef MAP_h
+#define MAP_h
+#include <map>
 #endif
 
 // Diagnostic flags
@@ -33,16 +32,6 @@
 namespace LatticeGillespie {
 
 	/****************************************
-	General functions
-	****************************************/
-
-	// Write vector to file
-	void write_vector_to_file(std::string fname, std::vector<int> v);
-
-	// Print mvec
-	std::ostream& operator<<(std::ostream& os, const std::list<Species>& vs);
-
-	/****************************************
 	Main simulation class
 	****************************************/
 
@@ -50,51 +39,8 @@ namespace LatticeGillespie {
 	{
 	private:
 
-		// The dimensionality of the lattice
-		int _dim;
-
-		// The lattice
-		Lattice *_lattice;
-
-		// List of species
-		std::list<Species> _species;
-
-		// List of bimol rxns
-		std::list<BiReaction> _bi_rxns;
-
-		// List of unimol rxns
-		std::list<UniReaction> _uni_rxns;
-
-		// Box length
-		int _box_length;
-
-		// Current time
-		double _t;
-		int _t_step;
-
-		// Timestep
-		double _dt;
-
-		// Time and value of the next unimolecular reaction
-		double _t_uni_next;
-		UniReaction *_uni_next; // Null indicates there is none scheduled
-
-		/********************
-		Find a species by name
-		********************/
-
-		Species* _find_species(std::string name);
-
-		/********************
-		Schedule the next uni reaction
-		********************/
-
-		void _schedule_uni();
-
-		// Constructor helpers
-		void _clean_up();
-		void _copy(const Simulation& other);
-		void _reset();
+		class Impl;
+		std::unique_ptr<Impl> _impl;
 
 	public:
 
@@ -103,10 +49,8 @@ namespace LatticeGillespie {
 		********************/
 
 		Simulation(double dt, int box_length, int dim=3);
-		Simulation(const Simulation& other);
-		Simulation(Simulation&& other);
-		Simulation& operator=(const Simulation& other);
-	    Simulation& operator=(Simulation&& other);
+		Simulation(Simulation&& other); // movable but no copies
+	    Simulation& operator=(Simulation&& other); // movable but no copies
 		~Simulation();
 
 		/********************
@@ -138,18 +82,6 @@ namespace LatticeGillespie {
 		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps);
 
 		/********************
-		Do a uni reaction
-		********************/
-
-		void do_uni_rxn(UniReaction *rxn);
-
-		/********************
-		Diffuse all the mols and do bimol reactions
-		********************/
-
-		void diffuse_mols();
-
-		/********************
 		Run simulation
 		********************/
 
@@ -161,5 +93,4 @@ namespace LatticeGillespie {
 
 		void write_lattice(int index, int write_version_no);
 	};
-
 };
