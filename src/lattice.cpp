@@ -12,6 +12,53 @@
 namespace LatticeGillespie {
 
 	/****************************************
+	Function to find all possible triplet path steps for a given dimension
+	****************************************/
+
+	std::vector<std::pair<Site3D,Site3D>> find_triplet_path_steps(int dim) {
+		// All sites of nbrhood of size 2
+		/*
+		std::vector<Site3D> all_steps;
+		Site3D s(0,0,0);
+		if (dim == 1) {
+			for (int iz=-2; iz<=2; iz++) {
+				s.z = iz;
+				all_sites.push_back(s);
+			};
+		} else if (dim == 2) {
+			for (int iy=-2; iy<=2; iy++) {
+				for (int iz=-2; iz<=2; iz++) {
+					s.y = iy;
+					s.z = iz;
+					all_sites.push_back(s);
+				};
+			};
+		} else if (dim == 3) {
+			for (int ix=-2; ix<=2; ix++) {
+				for (int iy=-2; iy<=2; iy++) {
+					for (int iz=-2; iz<=2; iz++) {
+						s.x = ix;
+						s.y = iy;
+						s.z = iz;
+						all_sites.push_back(s);
+					};
+				};
+			};
+		};
+		*/
+
+		// Pick all possible triplets
+		// ...
+
+		std::vector<std::pair<Site3D,Site3D>> ret;
+		ret.push_back(std::make_pair(Site3D(0,0,-2),Site3D(0,0,-1)));
+		ret.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,0,1)));
+		ret.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,0,2)));
+
+		return ret;
+	};
+
+	/****************************************
 	Structure to hold a lattice site iterator
 	****************************************/
 
@@ -74,8 +121,7 @@ namespace LatticeGillespie {
 		_steps_nbrs.push_back(Site3D(0,0,-1));
 		_steps_nbrs.push_back(Site3D(0,0,1));
 		// Next nbr paths
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,0,-1)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,0,1)));
+		_steps_triplet_paths = find_triplet_path_steps(_dim);
 	};
 	Lattice::Lattice(int box_length_1, int box_length_2) {
 		_dim = 2;
@@ -88,16 +134,7 @@ namespace LatticeGillespie {
 		_steps_nbrs.push_back(Site3D(0,-1,0));
 		_steps_nbrs.push_back(Site3D(0,1,0));
 		// Next nbr paths
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,0,-1)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,-1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,1,0)));
-
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,0,1)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,-1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,1,0)));
-
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,-1,0),Site3D(0,-1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,1,0),Site3D(0,1,0)));
+		_steps_triplet_paths = find_triplet_path_steps(_dim);
 	};
 	Lattice::Lattice(int box_length_1, int box_length_2, int box_length_3) {
 		_dim = 3;
@@ -112,28 +149,7 @@ namespace LatticeGillespie {
 		_steps_nbrs.push_back(Site3D(-1,0,0));
 		_steps_nbrs.push_back(Site3D(1,0,0));
 		// Next nbr paths
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,0,-1)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,-1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(0,1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(-1,0,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,-1),Site3D(1,0,0)));
-
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,0,1)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,-1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(0,1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(-1,0,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,0,1),Site3D(1,0,0)));
-
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,-1,0),Site3D(0,-1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,-1,0),Site3D(-1,0,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,-1,0),Site3D(1,0,0)));
-
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,1,0),Site3D(0,1,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,1,0),Site3D(-1,0,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(0,1,0),Site3D(1,0,0)));
-
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(-1,0,0),Site3D(-1,0,0)));
-		_steps_next_nbr_paths.push_back(std::make_pair(Site3D(1,0,0),Site3D(1,0,0)));
+		_steps_triplet_paths = find_triplet_path_steps(_dim);
 	};
 	Lattice::Lattice(const Lattice& other) {
 		_copy(other);
@@ -174,7 +190,7 @@ namespace LatticeGillespie {
 		_dim = other._dim;
 		_map = other._map;
 		_steps_nbrs = other._steps_nbrs;
-		_steps_next_nbr_paths = other._steps_next_nbr_paths;
+		_steps_triplet_paths = other._steps_triplet_paths;
 	};
 	void Lattice::_reset() {
 		_box_length_x = 0;
@@ -183,7 +199,7 @@ namespace LatticeGillespie {
 		_dim = 0;
 		_map.clear();
 		_steps_nbrs.clear();
-		_steps_next_nbr_paths.clear();
+		_steps_triplet_paths.clear();
 	};
 
 	/********************
@@ -534,6 +550,11 @@ namespace LatticeGillespie {
 
 	void Lattice::sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, int n_steps) {
 
+		if (_dim != 1 && k_dict.size() > 0) {
+			std::cerr << "ERROR! Triplet sampling for dims > 1 not yet supported" << std::endl;
+			exit(EXIT_FAILURE);
+		};
+
 		// Construct a vec of all possible species
 		std::vector<Species*> sp_vec;
 		for (auto sp_pair: h_dict) {
@@ -577,8 +598,8 @@ namespace LatticeGillespie {
 
 							// NNs for J 
 							nbrs = get_all_neighbors(s);
-							for (auto it_nbr: nbrs) {
-								ret_nbr1 = get_mol_it(it_nbr);
+							for (auto nbr: nbrs) {
+								ret_nbr1 = get_mol_it(nbr);
 								if (ret_nbr1.first) {
 									// Occupied
 									energy += j_dict[sp_new][ret_nbr1.second.it_1D->second.sp];
@@ -587,13 +608,16 @@ namespace LatticeGillespie {
 
 							// Triplets for K
 							if (k_dict.size() != 0) {
-								nnbrs = get_all_next_neighbor_pairs(s);
-								for (auto it_nbr_pair: nnbrs) {
-									ret_nbr1 = get_mol_it(it_nbr_pair.first);
+								nnbrs = get_all_triplet_considerations(s);
+								//std::cout << "site: " << s << std::endl;
+								for (auto nbr_pair: nnbrs) {
+									//std::cout << "considering: " << nbr_pair.first << " " << nbr_pair.second << std::endl;
+									ret_nbr1 = get_mol_it(nbr_pair.first);
 									if (ret_nbr1.first) {
-										ret_nbr2 = get_mol_it(it_nbr_pair.second);
+										ret_nbr2 = get_mol_it(nbr_pair.second);
 										if (ret_nbr2.first) {
 											// Both occupied
+											//std::cout << "OCC!" << std::endl;
 											energy += k_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp];
 										};
 									};
@@ -603,6 +627,13 @@ namespace LatticeGillespie {
 							// Append prob
 							// probs.push_back(exp(energy));
 							props.push_back(props.back()+exp(energy));
+							/*
+							std::cout << "props: ";
+							for (auto pr: props) {
+								std::cout << pr << " ";
+							};
+							std::cout << std::endl;
+							*/
 						};
 
 						// Sample RV
@@ -614,6 +645,7 @@ namespace LatticeGillespie {
 						} else {
 							// Make the appropriate species at this site
 							replace_mol(s,sp_vec[i_chosen-1]);
+							// std::cout << "flip up" << std::endl;
 						};
 
 					};
@@ -697,23 +729,24 @@ namespace LatticeGillespie {
 		return nbrs;
 	};
 
-	std::vector<std::pair<Site3D,Site3D>> Lattice::get_all_next_neighbor_pairs(Site3D s)
+	std::vector<std::pair<Site3D,Site3D>> Lattice::get_all_triplet_considerations(Site3D s)
 	{
 		std::vector<std::pair<Site3D,Site3D>> nnbrs;
 		Site3D nbr1 = s;
 		Site3D nbr2 = s;
 
-		for (auto step: _steps_next_nbr_paths) {
+		for (auto step: _steps_triplet_paths) {
 			nbr1 = s;
 			nbr1.x += step.first.x;
 			nbr1.y += step.first.y;
 			nbr1.z += step.first.z;
-			// Check
+			// Check first
 			if (nbr1.x <= this->_box_length_x && nbr1.x >= 1 && nbr1.y <= this->_box_length_y && nbr1.y >= 1 && nbr1.z <= this->_box_length_z && nbr1.z >= 1) {
-				nbr2 = nbr1;
+				nbr2 = s;
 				nbr2.x += step.second.x;
 				nbr2.y += step.second.y;
 				nbr2.z += step.second.z;
+				// Check second
 				if (nbr2.x <= this->_box_length_x && nbr2.x >= 1 && nbr2.y <= this->_box_length_y && nbr2.y >= 1 && nbr2.z <= this->_box_length_z && nbr2.z >= 1) {
 					nnbrs.push_back(std::make_pair(nbr1,nbr2));
 				};

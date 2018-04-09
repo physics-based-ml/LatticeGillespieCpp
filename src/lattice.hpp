@@ -92,7 +92,7 @@ namespace LatticeGillespie {
 
 		// Steps to search for neighbors
 		std::vector<Site3D> _steps_nbrs;
-		std::vector<std::pair<Site3D,Site3D>> _steps_next_nbr_paths;
+		std::vector<std::pair<Site3D,Site3D>> _steps_triplet_paths;
 
 	private:
 
@@ -203,7 +203,7 @@ namespace LatticeGillespie {
 		********************/
 
 		std::vector<Site3D> get_all_neighbors(Site3D s);
-		std::vector<std::pair<Site3D,Site3D>> get_all_next_neighbor_pairs(Site3D s);
+		std::vector<std::pair<Site3D,Site3D>> get_all_triplet_considerations(Site3D s);
 	};
 
 };
