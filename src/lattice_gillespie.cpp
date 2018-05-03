@@ -7,12 +7,7 @@
 #include <math.h>
 #include <fstream>
 
-// Other LatticeGillespie
-
-#ifndef LATTICE_h
-#define LATTICE_h
 #include "lattice.hpp"
-#endif
 
 /************************************
 * Namespace for LatticeGillespie
@@ -151,13 +146,13 @@ namespace LatticeGillespie {
 		Run simulation
 		********************/
 
-		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0);
+		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0, std::string dir=".");
 
 		/********************
 		Write lattice
 		********************/
 
-		void write_lattice(int index, int write_version_no);
+		void write_lattice(int index, int write_version_no, std::string dir);
 	};
 
 	/****************************************
@@ -393,6 +388,10 @@ namespace LatticeGillespie {
 
 		// Random initial lattice
 		populate_lattice(counts0);
+
+		// TMP
+		// Write the lattice into a temp dir
+		// _lattice->write_to_file("lattice_v300/pre.txt");
 
 		// Convert the strings into species
 		std::map<Species*, double> h_dict_sp;
@@ -633,7 +632,7 @@ namespace LatticeGillespie {
 	Run simulation
 	********************/
 
-	void Simulation::Impl::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no)
+	void Simulation::Impl::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no, std::string dir)
 	{
 		// Clear data in files if writing
 		std::ofstream ofs;
@@ -641,7 +640,7 @@ namespace LatticeGillespie {
 		if (write_counts || write_nns || write_latt) {
 			// Clear counts
 			for (auto s: this->_species) {
-				fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
+				fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
 				ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
 				ofs.close();
 				fname.str("");
@@ -652,7 +651,7 @@ namespace LatticeGillespie {
 			while (it1 != this->_species.end()) {
 				it2 = it1;
 				while (it2 != this->_species.end()) {
-					fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
+					fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
 					ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
 					ofs.close();
 					fname.str("");
@@ -661,7 +660,7 @@ namespace LatticeGillespie {
 				it1++;
 			};
 			// Clear lattice data
-			fname << "exec rm -r ./lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/*";
+			fname << "exec rm -r ./" << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/*";
 			system(fname.str().c_str());
 			fname.str("");
 		};
@@ -685,7 +684,7 @@ namespace LatticeGillespie {
 				if (write_counts) {
 					// Write counts to file
 					for (auto s: this->_species) {
-						fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
+						fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
 						ofs.open(fname.str(), std::ofstream::app);
 						ofs << this->_t << " " << s.count << "\n";
 						ofs.close();
@@ -699,7 +698,7 @@ namespace LatticeGillespie {
 					while (it1 != this->_species.end()) {
 						it2 = it1;
 						while (it2 != this->_species.end()) {
-							fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
+							fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
 							ofs.open(fname.str(), std::ofstream::app);
 							ofs << this->_t << " " << _lattice->get_nn(&(*it1),&(*it2)) << "\n";
 							ofs.close();
@@ -711,7 +710,7 @@ namespace LatticeGillespie {
 				};
 				if (write_latt) {
 					// Write the lattice
-					write_lattice(int(this->_t_step/write_step), write_version_no);
+					write_lattice(int(this->_t_step/write_step), write_version_no, dir);
 				};
 			};
 
@@ -746,10 +745,10 @@ namespace LatticeGillespie {
 	Write lattice
 	********************/
 
-	void Simulation::Impl::write_lattice(int index, int write_version_no)
+	void Simulation::Impl::write_lattice(int index, int write_version_no, std::string dir)
 	{
 		std::stringstream fname;
-		fname << "lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
+		fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
 		_lattice->write_to_file(fname.str());
 		fname.str("");
 	};
@@ -876,15 +875,15 @@ namespace LatticeGillespie {
 	Run simulation
 	********************/
 
-	void Simulation::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no) {
-		_impl->run(n_timesteps,verbose,write_counts,write_nns,write_latt,write_step,write_version_no);
+	void Simulation::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no, std::string dir) {
+		_impl->run(n_timesteps,verbose,write_counts,write_nns,write_latt,write_step,write_version_no, dir);
 	};
 
 	/********************
 	Write lattice
 	********************/
 
-	void Simulation::write_lattice(int index, int write_version_no) {
-		_impl->write_lattice(index,write_version_no);
+	void Simulation::write_lattice(int index, int write_version_no, std::string dir) {
+		_impl->write_lattice(index,write_version_no, dir);
 	};
 };

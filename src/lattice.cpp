@@ -565,6 +565,7 @@ namespace LatticeGillespie {
 		Site3D s;
 		double energy;
 		std::vector<double> props; // propensities
+		std::vector<double> probs; // probs
 		int i_chosen;
 		std::vector<Site3D> nbrs;
 		std::vector<std::pair<Site3D,Site3D>> nnbrs;
@@ -583,57 +584,72 @@ namespace LatticeGillespie {
 						s = Site3D(i,j,k);
 
 						// Clear propensities
-						// probs.clear();
+						probs.clear();
 						props.clear();
 						props.push_back(0.0);
 
 						// Propensity for no spin is exp(0) = 1
-						// probs.push_back(1.0);
+						probs.push_back(1.0);
 						props.push_back(1.0);
 						
+						// std::cout << "Site: " << i << " " << j << " " << k << " occ = ";
+						ret_nbr1 = get_mol_it(s);
+						// std::cout << ret_nbr1.first << " ";
+
 						// Go through all possible species this could be, calculate propensities
 						for (auto sp_new: sp_vec) {
+							// std::cout << "species: " << sp_new->name << " ";
+
 							// Bias
 							energy = h_dict[sp_new];
+							// std::cout << "bias: " << energy << " ";
 
 							// NNs for J 
+							double energy_nn = 0.0;
 							nbrs = get_all_neighbors(s);
 							for (auto nbr: nbrs) {
+								// std::cout << "nbr: " << nbr.z << " ";
 								ret_nbr1 = get_mol_it(nbr);
 								if (ret_nbr1.first) {
 									// Occupied
+									// std::cout << "occ => j= " << j_dict[sp_new][ret_nbr1.second.it_1D->second.sp] << " ";
 									energy += j_dict[sp_new][ret_nbr1.second.it_1D->second.sp];
+									energy_nn += j_dict[sp_new][ret_nbr1.second.it_1D->second.sp];
 								};
 							};
+							// std::cout << "nns only: " << energy_nn << " ";
 
 							// Triplets for K
+							double energy_triplet=0.0;
 							if (k_dict.size() != 0) {
 								nnbrs = get_all_triplet_considerations(s);
-								//std::cout << "site: " << s << std::endl;
 								for (auto nbr_pair: nnbrs) {
-									//std::cout << "considering: " << nbr_pair.first << " " << nbr_pair.second << std::endl;
 									ret_nbr1 = get_mol_it(nbr_pair.first);
 									if (ret_nbr1.first) {
 										ret_nbr2 = get_mol_it(nbr_pair.second);
 										if (ret_nbr2.first) {
 											// Both occupied
-											//std::cout << "OCC!" << std::endl;
 											energy += k_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp];
+											energy_triplet += k_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp];
 										};
 									};
 								};
 							};
+							// std::cout << "triplets only: " << energy_triplet << " ";
 
 							// Append prob
-							// probs.push_back(exp(energy));
+							probs.push_back(exp(energy));
 							props.push_back(props.back()+exp(energy));
-							/*
-							std::cout << "props: ";
-							for (auto pr: props) {
-								std::cout << pr << " ";
-							};
-							std::cout << std::endl;
-							*/
+						};
+
+						// Normalize probs
+						double tot=0.0;
+						for (auto pr: probs) {
+							tot += pr;
+						};
+						for (int i=0; i<probs.size(); i++) {
+							probs[i] /= tot;
+							// std::cout << probs[i] << " ";
 						};
 
 						// Sample RV
@@ -642,10 +658,11 @@ namespace LatticeGillespie {
 						if (i_chosen==0) {
 							// Flip down (new spin = 0)
 							erase_mol(s);
+							// std::cout << " flipped down" << std::endl;
 						} else {
 							// Make the appropriate species at this site
 							replace_mol(s,sp_vec[i_chosen-1]);
-							// std::cout << "flip up" << std::endl;
+							// std::cout << " flipped up" << std::endl;
 						};
 
 					};

@@ -85,12 +85,12 @@ namespace LatticeGillespie {
 		Run simulation
 		********************/
 
-		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0);
+		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0, std::string dir=".");
 
 		/********************
 		Write lattice
 		********************/
 
-		void write_lattice(int index, int write_version_no);
+		void write_lattice(int index, int write_version_no, std::string dir=".");
 	};
 };
