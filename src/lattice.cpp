@@ -58,6 +58,15 @@ namespace LatticeGillespie {
 		return ret;
 	};
 
+	std::vector<std::vector<Site3D>> find_quartic_path_steps(int dim) {
+		std::vector<std::vector<Site3D>> ret;
+		ret.push_back(std::vector<Site3D>({Site3D(0,0,-3),Site3D(0,0,-2),Site3D(0,0,-1)}));
+		ret.push_back(std::vector<Site3D>({Site3D(0,0,-2),Site3D(0,0,-1),Site3D(0,0,1)}));
+		ret.push_back(std::vector<Site3D>({Site3D(0,0,-1),Site3D(0,0,1),Site3D(0,0,2)}));
+		ret.push_back(std::vector<Site3D>({Site3D(0,0,1),Site3D(0,0,2),Site3D(0,0,3)}));
+		return ret;
+	};
+
 	/****************************************
 	Structure to hold a lattice site iterator
 	****************************************/
@@ -122,6 +131,7 @@ namespace LatticeGillespie {
 		_steps_nbrs.push_back(Site3D(0,0,1));
 		// Next nbr paths
 		_steps_triplet_paths = find_triplet_path_steps(_dim);
+		_steps_quartic_paths = find_quartic_path_steps(_dim);
 	};
 	Lattice::Lattice(int box_length_1, int box_length_2) {
 		_dim = 2;
@@ -133,8 +143,6 @@ namespace LatticeGillespie {
 		_steps_nbrs.push_back(Site3D(0,0,1));
 		_steps_nbrs.push_back(Site3D(0,-1,0));
 		_steps_nbrs.push_back(Site3D(0,1,0));
-		// Next nbr paths
-		_steps_triplet_paths = find_triplet_path_steps(_dim);
 	};
 	Lattice::Lattice(int box_length_1, int box_length_2, int box_length_3) {
 		_dim = 3;
@@ -148,8 +156,6 @@ namespace LatticeGillespie {
 		_steps_nbrs.push_back(Site3D(0,1,0));
 		_steps_nbrs.push_back(Site3D(-1,0,0));
 		_steps_nbrs.push_back(Site3D(1,0,0));
-		// Next nbr paths
-		_steps_triplet_paths = find_triplet_path_steps(_dim);
 	};
 	Lattice::Lattice(const Lattice& other) {
 		_copy(other);
@@ -191,6 +197,7 @@ namespace LatticeGillespie {
 		_map = other._map;
 		_steps_nbrs = other._steps_nbrs;
 		_steps_triplet_paths = other._steps_triplet_paths;
+		_steps_quartic_paths = other._steps_quartic_paths;
 	};
 	void Lattice::_reset() {
 		_box_length_x = 0;
@@ -200,6 +207,7 @@ namespace LatticeGillespie {
 		_map.clear();
 		_steps_nbrs.clear();
 		_steps_triplet_paths.clear();
+		_steps_quartic_paths.clear();
 	};
 
 	/********************
@@ -548,10 +556,10 @@ namespace LatticeGillespie {
 	Sample
 	********************/
 
-	void Lattice::sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, int n_steps) {
+	void Lattice::sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, std::map<Species*, std::map<Species*, std::map<Species*,std::map<Species*,double>>>> &q_dict, int n_steps) {
 
-		if (_dim != 1 && k_dict.size() > 0) {
-			std::cerr << "ERROR! Triplet sampling for dims > 1 not yet supported" << std::endl;
+		if (_dim != 1 && ( k_dict.size() > 0 || q_dict.size() > 0) ) {
+			std::cerr << "ERROR! Triplet/quartic sampling for dims > 1 not yet supported" << std::endl;
 			exit(EXIT_FAILURE);
 		};
 
@@ -569,8 +577,8 @@ namespace LatticeGillespie {
 		int i_chosen;
 		std::vector<Site3D> nbrs;
 		std::vector<std::pair<Site3D,Site3D>> nnbrs;
-		std::pair<bool,SiteIt3D> ret_nbr1;
-		std::pair<bool,SiteIt3D> ret_nbr2;
+		std::vector<std::vector<Site3D>> nnnbrs;
+		std::pair<bool,SiteIt3D> ret_nbr1,ret_nbr2,ret_nbr3;
 
 		// Go over all steps
 		for (int i_step=0; i_step<n_steps; i_step++) {
@@ -592,35 +600,23 @@ namespace LatticeGillespie {
 						probs.push_back(1.0);
 						props.push_back(1.0);
 						
-						// std::cout << "Site: " << i << " " << j << " " << k << " occ = ";
-						ret_nbr1 = get_mol_it(s);
-						// std::cout << ret_nbr1.first << " ";
-
 						// Go through all possible species this could be, calculate propensities
 						for (auto sp_new: sp_vec) {
-							// std::cout << "species: " << sp_new->name << " ";
 
 							// Bias
 							energy = h_dict[sp_new];
-							// std::cout << "bias: " << energy << " ";
 
 							// NNs for J 
-							double energy_nn = 0.0;
 							nbrs = get_all_neighbors(s);
 							for (auto nbr: nbrs) {
-								// std::cout << "nbr: " << nbr.z << " ";
 								ret_nbr1 = get_mol_it(nbr);
 								if (ret_nbr1.first) {
 									// Occupied
-									// std::cout << "occ => j= " << j_dict[sp_new][ret_nbr1.second.it_1D->second.sp] << " ";
 									energy += j_dict[sp_new][ret_nbr1.second.it_1D->second.sp];
-									energy_nn += j_dict[sp_new][ret_nbr1.second.it_1D->second.sp];
 								};
 							};
-							// std::cout << "nns only: " << energy_nn << " ";
 
 							// Triplets for K
-							double energy_triplet=0.0;
 							if (k_dict.size() != 0) {
 								nnbrs = get_all_triplet_considerations(s);
 								for (auto nbr_pair: nnbrs) {
@@ -630,12 +626,28 @@ namespace LatticeGillespie {
 										if (ret_nbr2.first) {
 											// Both occupied
 											energy += k_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp];
-											energy_triplet += k_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp];
 										};
 									};
 								};
 							};
-							// std::cout << "triplets only: " << energy_triplet << " ";
+
+							// Quartics for Q
+							if (q_dict.size() != 0) {
+								nnnbrs = get_all_quartic_considerations(s);
+								for (auto nbrs: nnnbrs) {
+									ret_nbr1 = get_mol_it(nbrs[0]);
+									if (ret_nbr1.first) {
+										ret_nbr2 = get_mol_it(nbrs[1]);
+										if (ret_nbr2.first) {
+											ret_nbr3 = get_mol_it(nbrs[2]);
+											if (ret_nbr3.first) {
+												// Both occupied
+												energy += q_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp][ret_nbr3.second.it_1D->second.sp];
+											};
+										};
+									};
+								};
+							};
 
 							// Append prob
 							probs.push_back(exp(energy));
@@ -725,6 +737,19 @@ namespace LatticeGillespie {
 	};
 
 	/********************
+	Check if a site is in the lattice
+	********************/
+
+	// Check if a site is in the latt
+	bool Lattice::_check_if_in_latt(Site3D s) {
+		if (s.x <= this->_box_length_x && s.x >= 1 && s.y <= this->_box_length_y && s.y >= 1 && s.z <= this->_box_length_z && s.z >= 1) {
+			return true;
+		} else {
+			return false;
+		};
+	};
+
+	/********************
 	Get all neighbors of a site
 	********************/
 
@@ -739,7 +764,7 @@ namespace LatticeGillespie {
 			nbr.y += step.y;
 			nbr.z += step.z;
 			// Check
-			if (nbr.x <= this->_box_length_x && nbr.x >= 1 && nbr.y <= this->_box_length_y && nbr.y >= 1 && nbr.z <= this->_box_length_z && nbr.z >= 1) {
+			if (_check_if_in_latt(nbr)) {
 				nbrs.push_back(nbr);
 			};
 		};
@@ -758,13 +783,13 @@ namespace LatticeGillespie {
 			nbr1.y += step.first.y;
 			nbr1.z += step.first.z;
 			// Check first
-			if (nbr1.x <= this->_box_length_x && nbr1.x >= 1 && nbr1.y <= this->_box_length_y && nbr1.y >= 1 && nbr1.z <= this->_box_length_z && nbr1.z >= 1) {
+			if (_check_if_in_latt(nbr1)) {
 				nbr2 = s;
 				nbr2.x += step.second.x;
 				nbr2.y += step.second.y;
 				nbr2.z += step.second.z;
 				// Check second
-				if (nbr2.x <= this->_box_length_x && nbr2.x >= 1 && nbr2.y <= this->_box_length_y && nbr2.y >= 1 && nbr2.z <= this->_box_length_z && nbr2.z >= 1) {
+				if (_check_if_in_latt(nbr2)) {
 					nnbrs.push_back(std::make_pair(nbr1,nbr2));
 				};
 			};
@@ -772,5 +797,42 @@ namespace LatticeGillespie {
 
 		return nnbrs;
 	};
+
+	std::vector<std::vector<Site3D>> Lattice::get_all_quartic_considerations(Site3D s)
+	{
+		std::vector<std::vector<Site3D>> nnnbrs;
+		Site3D nbr1 = s;
+		Site3D nbr2 = s;
+		Site3D nbr3 = s;
+
+		for (auto step: _steps_quartic_paths) {
+			nbr1 = s;
+			nbr1.x += step[0].x;
+			nbr1.y += step[0].y;
+			nbr1.z += step[0].z;
+			// Check first
+			if (_check_if_in_latt(nbr1)) {
+				nbr2 = s;
+				nbr2.x += step[1].x;
+				nbr2.y += step[1].y;
+				nbr2.z += step[1].z;
+				// Check second
+				if (_check_if_in_latt(nbr2)) {
+					nbr3 = s;
+					nbr3.x += step[2].x;
+					nbr3.y += step[2].y;
+					nbr3.z += step[2].z;
+					// Check third
+					if (_check_if_in_latt(nbr3)) {
+						nnnbrs.push_back(std::vector<Site3D>({nbr1,nbr2,nbr3}));
+					};
+				};
+			};
+		};
+
+		return nnnbrs;
+	};
+
+
 
 };

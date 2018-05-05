@@ -129,6 +129,7 @@ namespace LatticeGillespie {
 		void populate_lattice(std::map<std::string,int> counts);
 		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
 		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps);
+		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps);
 
 		/********************
 		Do a uni reaction
@@ -368,10 +369,18 @@ namespace LatticeGillespie {
 
 	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict,std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
 		std::map<std::string,std::map<std::string,std::map<std::string,double>>> k_dict;
-		populate_lattice(h_dict,j_dict,k_dict,n_steps);
+		std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> q_dict;		
+		populate_lattice(h_dict,j_dict,k_dict,q_dict,n_steps);
 	};
 
 	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
+		std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> q_dict;		
+		populate_lattice(h_dict,j_dict,k_dict,q_dict,n_steps);
+	};
+
+
+	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps)
+	{
 		// Start by populating lattice randomly
 
 		// Random number of initial particles (min is 1, max is box vol)
@@ -397,6 +406,7 @@ namespace LatticeGillespie {
 		std::map<Species*, double> h_dict_sp;
 		std::map<Species*,std::map<Species*,double>> j_dict_sp;
 		std::map<Species*,std::map<Species*,std::map<Species*,double>>> k_dict_sp;
+		std::map<Species*,std::map<Species*,std::map<Species*,std::map<Species*,double>>>> q_dict_sp;
 		for (auto hpr: h_dict) {
 			h_dict_sp[_find_species(hpr.first)] = hpr.second;
 		};
@@ -412,9 +422,18 @@ namespace LatticeGillespie {
 				};
 			};
 		};
+		for (auto qpr1: q_dict) {
+			for (auto qpr2: qpr1.second) {
+				for (auto qpr3: qpr2.second) {
+						for (auto qpr4: qpr3.second) {
+						q_dict_sp[_find_species(qpr1.first)][_find_species(qpr2.first)][_find_species(qpr3.first)][_find_species(qpr4.first)] = qpr4.second;
+					};
+				};
+			};
+		};
 
 		// Now sample
-		_lattice->sample(h_dict_sp,j_dict_sp,k_dict_sp,n_steps);
+		_lattice->sample(h_dict_sp,j_dict_sp,k_dict_sp,q_dict_sp,n_steps);
 	};
 
 	/********************
@@ -869,6 +888,10 @@ namespace LatticeGillespie {
 	};
 	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
 		_impl->populate_lattice(h_dict,j_dict,k_dict,n_steps);
+	};
+	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps) {
+
+		_impl->populate_lattice(h_dict,j_dict,k_dict,q_dict,n_steps);
 	};
 
 	/********************

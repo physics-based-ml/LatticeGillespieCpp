@@ -93,8 +93,12 @@ namespace LatticeGillespie {
 		// Steps to search for neighbors
 		std::vector<Site3D> _steps_nbrs;
 		std::vector<std::pair<Site3D,Site3D>> _steps_triplet_paths;
+		std::vector<std::vector<Site3D>> _steps_quartic_paths;
 
 	private:
+
+		// Check if a site is in the latt
+		bool _check_if_in_latt(Site3D s);
 
 		// Helpers
 		void _clean_up();
@@ -180,7 +184,7 @@ namespace LatticeGillespie {
 		Sample
 		********************/
 
-		void sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, int n_steps);
+		void sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, std::map<Species*, std::map<Species*, std::map<Species*,std::map<Species*, double>>>> &q_dict, int n_steps);
 
 		/********************
 		Sample probabilities/propensities
@@ -204,6 +208,7 @@ namespace LatticeGillespie {
 
 		std::vector<Site3D> get_all_neighbors(Site3D s);
 		std::vector<std::pair<Site3D,Site3D>> get_all_triplet_considerations(Site3D s);
+		std::vector<std::vector<Site3D>> get_all_quartic_considerations(Site3D s);
 	};
 
 };

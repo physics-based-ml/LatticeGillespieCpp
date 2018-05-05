@@ -80,6 +80,7 @@ namespace LatticeGillespie {
 		void populate_lattice(std::map<std::string,int> counts);
 		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
 		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps);
+		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps);
 
 		/********************
 		Run simulation
