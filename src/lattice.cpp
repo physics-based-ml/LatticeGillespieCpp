@@ -663,6 +663,7 @@ namespace LatticeGillespie {
 							probs[i] /= tot;
 							// std::cout << probs[i] << " ";
 						};
+						// std::cout << std::endl;
 
 						// Sample RV
 						i_chosen = sample_prop_vec(props);
