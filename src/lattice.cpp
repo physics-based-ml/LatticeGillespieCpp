@@ -4,6 +4,7 @@
 #include <numeric>
 #include "math.h"
 #include <random>
+#include <sstream>
 
 /************************************
 * Namespace for LatticeGillespie
@@ -215,7 +216,17 @@ namespace LatticeGillespie {
 	********************/
 
 	void Lattice::clear() { this->_map.clear(); };
-	int Lattice::size() { return this->_map.size(); };
+	int Lattice::size() { 
+		int ctr=0;
+		for (auto it1 = this->_map.begin(); it1 != this->_map.end(); it1++) {
+			for (auto it2 = it1->second.begin(); it2 != it1->second.end(); it2++) {
+				for (auto it3 = it2->second.begin(); it3 != it2->second.end(); it3++) {
+					ctr++;
+				};
+			};
+		};
+		return ctr; 
+	};
 
 	/********************
 	Make a mol
@@ -533,7 +544,7 @@ namespace LatticeGillespie {
 	********************/
 
 	void Lattice::write_to_file(std::string fname) 
-	{
+	{	
 		std::ofstream f;
 		f.open (fname);
 		for (auto it_3D = this->_map.begin(); it_3D != this->_map.end(); it_3D++) {
@@ -547,6 +558,48 @@ namespace LatticeGillespie {
 						f << it_3D->first << " " << it_2D->first << " " << it_1D->first << " " << it_1D->second.sp->name << "\n";
 					};
 				};
+			};
+		};
+		f.close();
+	};
+
+	void Lattice::read_from_file(std::string fname, std::map<std::string,Species*> sp_map) 
+	{
+		if (_dim != 1) {
+			std::cerr << "ERROR! I was too lazy to write the import function for 3D yet" << std::endl;
+			exit(EXIT_FAILURE);
+		};
+
+		// Clear current
+		clear();
+
+		std::ifstream f;
+		f.open(fname);
+		std::string site="";
+		std::string species="";
+		std::string line;
+		std::istringstream iss;
+		if (f.is_open()) { // make sure we found it
+			while (getline(f,line)) {
+				if (line == "") { continue; };
+				iss = std::istringstream(line);
+				iss >> site;
+			    iss >> species;
+			    // Find species
+			    auto sp = sp_map.find(species);
+			    if (sp == sp_map.end()) {
+			    	std::cerr << "Error could not find species while reading lattice" << std::endl;
+			    	exit(EXIT_FAILURE);
+			    };
+		    	// Add
+		    	std::pair<bool,SiteIt3D> ret = make_mol(Site3D(1,1,atoi(site.c_str())),sp->second);
+		    	if (!ret.first) {
+		    		std::cerr << "Error making mol?" << std::endl;
+		    		exit(EXIT_FAILURE);
+		    	};
+		    	// Reset
+		    	site="";
+		    	species="";
 			};
 		};
 		f.close();

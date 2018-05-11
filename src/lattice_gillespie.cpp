@@ -150,10 +150,11 @@ namespace LatticeGillespie {
 		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0, std::string dir=".");
 
 		/********************
-		Write lattice
+		Write/Read lattice
 		********************/
 
 		void write_lattice(int index, int write_version_no, std::string dir);
+		void read_lattice(std::string fname);
 	};
 
 	/****************************************
@@ -761,7 +762,7 @@ namespace LatticeGillespie {
 	};
 
 	/********************
-	Write lattice
+	Write/Read lattice
 	********************/
 
 	void Simulation::Impl::write_lattice(int index, int write_version_no, std::string dir)
@@ -770,6 +771,14 @@ namespace LatticeGillespie {
 		fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/" << std::setfill('0') << std::setw(4) << index << ".txt";
 		_lattice->write_to_file(fname.str());
 		fname.str("");
+	};
+
+	void Simulation::Impl::read_lattice(std::string fname) {
+		std::map<std::string,Species*> sp_map;
+		for (auto s = _species.begin(); s!=_species.end(); s++) {
+			sp_map[s->name] = &*s;
+		};
+		_lattice->read_from_file(fname, sp_map);
 	};
 
 	/****************************************
@@ -903,10 +912,15 @@ namespace LatticeGillespie {
 	};
 
 	/********************
-	Write lattice
+	Write/Read lattice
 	********************/
 
 	void Simulation::write_lattice(int index, int write_version_no, std::string dir) {
 		_impl->write_lattice(index,write_version_no, dir);
 	};
+	void Simulation::read_lattice(std::string fname) {
+		_impl->read_lattice(fname);
+	};
+
+
 };

@@ -175,10 +175,11 @@ namespace LatticeGillespie {
 		int get_nn(Species *sa, Species *sb);
 
 		/********************
-		Write lattice to a file
+		Write/Read lattice to a file
 		********************/
 
 		void write_to_file(std::string fname);
+		void read_from_file(std::string fname, std::map<std::string,Species*> sp_map);
 
 		/********************
 		Sample
