@@ -21,3 +21,4 @@ else use the `-L` flag when linking. (`-L` needed at link time; `DYLD_LIBRARY_PA
 
 Unimolecular and bimolecular reactions on 1D, 2D, 3D lattices.
 
+![example](/figures/example.png)
