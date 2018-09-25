@@ -1,4 +1,4 @@
-#include "../include/lattice_gillespie.hpp"
+#include "../include/lattice_gillespie_bits/lattice_gillespie.hpp"
 #include <iostream>
 #include <iomanip>
 #include <sstream>

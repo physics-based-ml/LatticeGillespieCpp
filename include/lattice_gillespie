@@ -1,0 +1,6 @@
+#ifndef LATTICE_GILLESPIE
+#define LATTICE_GILLESPIE
+
+#include "lattice_gillespie_bits/lattice_gillespie.hpp"
+
+#endif

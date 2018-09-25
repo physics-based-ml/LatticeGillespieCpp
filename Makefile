@@ -17,7 +17,10 @@ INSTALL_LIB_DIR = /usr/local/lib
 INSTALL_INCLUDE_DIR = /usr/local/include
 
 # source files
-SRC_NAMES = lattice_gillespie.cpp lattice.cpp reactions.cpp species.cpp
+SRC_NAMES = lattice_gillespie.cpp \
+	lattice.cpp \
+	reactions.cpp \
+	species.cpp
 SRCS = $(addprefix $(SOURCE_DIR)/, $(SRC_NAMES))
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRC_NAMES:.cpp=.o))
 DEPS = $(OBJS:.o=.d)
@@ -47,5 +50,7 @@ clean:
 install:
 	mkdir -p $(INSTALL_LIB_DIR)
 	mkdir -p $(INSTALL_INCLUDE_DIR)
+	mkdir -p $(INSTALL_INCLUDE_DIR)/lattice_gillespie_bits
 	cp -p $(TARGET_LIB) $(INSTALL_LIB_DIR)
-	cp -p include/*.hpp $(INSTALL_INCLUDE_DIR)
+	cp -p include/lattice_gillespie_bits/*.hpp $(INSTALL_INCLUDE_DIR)/lattice_gillespie_bits
+	cp -p include/lattice_gillespie $(INSTALL_INCLUDE_DIR)
