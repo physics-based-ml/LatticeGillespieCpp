@@ -1,33 +1,17 @@
-// string
-#ifndef STRING_h
-#define STRING_h
 #include <string>
-#endif
-
-// utility for pair
-#ifndef PAIR_h
-#define PAIR_h
 #include <utility>
-#endif
-
-// map
-#ifndef MAP_h
-#define MAP_h
 #include <map>
-#endif
-
-// Other LatticeGillespie
-
-#ifndef REACTIONS_h
-#define REACTIONS_h
-#include "reactions.hpp"
-#endif
+#include <vector>
 
 /************************************
-* Namespace for LatticeGillespie
+* Namespace for latg
 ************************************/
 
-namespace LatticeGillespie {
+namespace latg {
+
+	// Forwards
+	class BiReaction;
+	class UniReaction;
 
 	/****************************************
 	General functions

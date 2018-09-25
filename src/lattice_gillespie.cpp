@@ -1,4 +1,10 @@
 #include "../include/lattice_gillespie_bits/lattice_gillespie.hpp"
+
+// Other headers
+#include "lattice.hpp"
+#include "species.hpp"
+#include "reactions.hpp"
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -6,14 +12,17 @@
 #include <stdlib.h>     /* srand, rand */
 #include <math.h>
 #include <fstream>
+#include <vector>
+#include <list>
 
-#include "lattice.hpp"
+// Diagnostic flags
+#define DIAG_DIFFUSE 0
 
 /************************************
-* Namespace for LatticeGillespie
+* Namespace for latg
 ************************************/
 
-namespace LatticeGillespie {
+namespace latg {
 
 	/****************************************
 	General functions

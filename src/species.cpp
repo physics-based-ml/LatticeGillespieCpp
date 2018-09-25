@@ -1,10 +1,13 @@
 #include "species.hpp"
 
+// Other headers
+#include "reactions.hpp"
+
 /************************************
-* Namespace for LatticeGillespie
+* Namespace for latg
 ************************************/
 
-namespace LatticeGillespie {
+namespace latg {
 
 	/****************************************
 	General functions

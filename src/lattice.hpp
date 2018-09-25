@@ -1,33 +1,16 @@
-// string
-#ifndef STRING_h
-#define STRING_h
 #include <string>
-#endif
-
-// vector
-#ifndef VECTOR_h
-#define VECTOR_h
 #include <vector>
-#endif
-
-// map
-#ifndef MAP_h
-#define MAP_h
 #include <map>
-#endif
-
-// Other LatticeGillespie
-
-#ifndef SPECIES_h
-#define SPECIES_h
-#include "species.hpp"
-#endif
 
 /************************************
-* Namespace for LatticeGillespie
+* Namespace for latg
 ************************************/
 
-namespace LatticeGillespie {
+namespace latg {
+
+	// Forwards
+	struct Species;
+	struct Mol;
 
 	/****************************************
 	General functions

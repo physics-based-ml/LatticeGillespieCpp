@@ -1,35 +1,11 @@
-// vector
-#ifndef VECTOR_h
-#define VECTOR_h
-#include <vector>
-#endif
-
-// list
-#ifndef LIST_h
-#define LIST_h
-#include <list>
-#endif
-
-// string
-#ifndef STRING_h
-#define STRING_h
 #include <string>
-#endif
-
-// map
-#ifndef MAP_h
-#define MAP_h
 #include <map>
-#endif
-
-// Diagnostic flags
-#define DIAG_DIFFUSE 0
 
 /************************************
-* Namespace for LatticeGillespie
+* Namespace for latg
 ************************************/
 
-namespace LatticeGillespie {
+namespace latg {
 
 	/****************************************
 	Main simulation class

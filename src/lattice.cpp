@@ -1,4 +1,8 @@
 #include "lattice.hpp"
+
+// Other headers
+#include "species.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <numeric>
@@ -7,10 +11,10 @@
 #include <sstream>
 
 /************************************
-* Namespace for LatticeGillespie
+* Namespace for latg
 ************************************/
 
-namespace LatticeGillespie {
+namespace latg {
 
 	/****************************************
 	Function to find all possible triplet path steps for a given dimension
