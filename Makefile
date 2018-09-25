@@ -7,7 +7,7 @@ CXXFLAGS = -std=c++14 -fPIC -O3
 # linking flags
 LDFLAGS = -shared
 # target lib
-TARGET_LIB = lib/liblatticegillespie.so
+TARGET_LIB = lib/liblattgillespie.so
 # build dir
 BUILD_DIR = build
 # source dir
@@ -50,7 +50,7 @@ clean:
 install:
 	mkdir -p $(INSTALL_LIB_DIR)
 	mkdir -p $(INSTALL_INCLUDE_DIR)
-	mkdir -p $(INSTALL_INCLUDE_DIR)/lattice_gillespie_bits
+	mkdir -p $(INSTALL_INCLUDE_DIR)/lattGillespie_bits
 	cp -p $(TARGET_LIB) $(INSTALL_LIB_DIR)
-	cp -p include/lattice_gillespie_bits/*.hpp $(INSTALL_INCLUDE_DIR)/lattice_gillespie_bits
-	cp -p include/lattice_gillespie $(INSTALL_INCLUDE_DIR)
+	cp -p include/lattGillespie_bits/*.hpp $(INSTALL_INCLUDE_DIR)/lattGillespie_bits
+	cp -p include/lattGillespie $(INSTALL_INCLUDE_DIR)

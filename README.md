@@ -9,11 +9,15 @@ make install
 ```
 The default location is `/usr/local/lib` and `/usr/local/include`.
 
+## Including
+
+Use the convenient `include <lattGillespie>` (note capital `G`).
+
 ## Linking
 
 Example:
 ```
-g++ -std=c++14 -O3 -llatticegillespie -o main.o main.cpp
+g++ -std=c++14 -O3 -llattgillespie -o main.o main.cpp
 ```
 Be sure to put it into your `DYLD_LIBRARY_PATH`:
 ```
