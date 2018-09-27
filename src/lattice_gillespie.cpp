@@ -1,4 +1,4 @@
-#include "../include/lattGillespie_bits/lattice_gillespie.hpp"
+#include "../include/lattgillespie_bits/lattice_gillespie.hpp"
 
 // Other headers
 #include "lattice.hpp"

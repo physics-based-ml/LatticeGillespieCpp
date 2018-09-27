@@ -50,7 +50,7 @@ clean:
 install:
 	mkdir -p $(INSTALL_LIB_DIR)
 	mkdir -p $(INSTALL_INCLUDE_DIR)
-	mkdir -p $(INSTALL_INCLUDE_DIR)/lattGillespie_bits
+	mkdir -p $(INSTALL_INCLUDE_DIR)/lattgillespie_bits
 	cp -p $(TARGET_LIB) $(INSTALL_LIB_DIR)
-	cp -p include/lattGillespie_bits/*.hpp $(INSTALL_INCLUDE_DIR)/lattGillespie_bits
-	cp -p include/lattGillespie $(INSTALL_INCLUDE_DIR)
+	cp -p include/lattgillespie_bits/*.hpp $(INSTALL_INCLUDE_DIR)/lattgillespie_bits
+	cp -p include/lattgillespie $(INSTALL_INCLUDE_DIR)
