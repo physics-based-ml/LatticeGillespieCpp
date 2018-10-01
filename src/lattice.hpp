@@ -3,10 +3,10 @@
 #include <map>
 
 /************************************
-* Namespace for latg
+* Namespace for lattg
 ************************************/
 
-namespace latg {
+namespace lattg {
 
 	// Forwards
 	struct Species;

@@ -27,7 +27,7 @@ else use the `-L` flag when linking. (`-L` needed at link time; `DYLD_LIBRARY_PA
 
 ## Namespace
 
-The namespace is `latg`.
+The namespace is `lattg`.
 
 ## Features
 

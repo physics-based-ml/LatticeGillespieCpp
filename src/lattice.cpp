@@ -11,10 +11,10 @@
 #include <sstream>
 
 /************************************
-* Namespace for latg
+* Namespace for lattg
 ************************************/
 
-namespace latg {
+namespace lattg {
 
 	/****************************************
 	Function to find all possible triplet path steps for a given dimension

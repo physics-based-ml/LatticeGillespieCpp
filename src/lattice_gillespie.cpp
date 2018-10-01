@@ -19,10 +19,10 @@
 #define DIAG_DIFFUSE 0
 
 /************************************
-* Namespace for latg
+* Namespace for lattg
 ************************************/
 
-namespace latg {
+namespace lattg {
 
 	/****************************************
 	General functions

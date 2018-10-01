@@ -1,10 +1,10 @@
 #include "reactions.hpp"
 
 /************************************
-* Namespace for latg
+* Namespace for lattg
 ************************************/
 
-namespace latg {
+namespace lattg {
 
 	/****************************************
 	Unireaction

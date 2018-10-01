@@ -4,10 +4,10 @@
 #include <vector>
 
 /************************************
-* Namespace for latg
+* Namespace for lattg
 ************************************/
 
-namespace latg {
+namespace lattg {
 
 	// Forwards
 	class BiReaction;
