@@ -551,6 +551,12 @@ namespace lattg {
 	{	
 		std::ofstream f;
 		f.open (fname);
+		// Check that we can open it
+		if (!f.is_open()) {
+			std::cerr << ">>> Error: Lattice::write_to_file <<< could not open: " << fname << " for writing" << std::endl;
+			exit(EXIT_FAILURE);
+		};
+
 		for (auto it_3D = this->_map.begin(); it_3D != this->_map.end(); it_3D++) {
 			for (auto it_2D = it_3D->second.begin(); it_2D != it_3D->second.end(); it_2D++) {
 				for (auto it_1D = it_2D->second.begin(); it_1D != it_2D->second.end(); it_1D++) {
@@ -569,17 +575,12 @@ namespace lattg {
 
 	void Lattice::read_from_file(std::string fname, std::map<std::string,Species*> sp_map) 
 	{
-		if (_dim != 1) {
-			std::cerr << "ERROR! I was too lazy to write the import function for 3D yet" << std::endl;
-			exit(EXIT_FAILURE);
-		};
-
 		// Clear current
 		clear();
 
 		std::ifstream f;
 		f.open(fname);
-		std::string site="";
+		std::string site_x="",site_y="",site_z="";
 		std::string species="";
 		std::string line;
 		std::istringstream iss;
@@ -587,7 +588,16 @@ namespace lattg {
 			while (getline(f,line)) {
 				if (line == "") { continue; };
 				iss = std::istringstream(line);
-				iss >> site;
+				if (_dim == 1) {
+					iss >> site_z;
+				} else if (_dim == 2) {
+					iss >> site_y;
+					iss >> site_z;
+				} else if (_dim == 3) {
+					iss >> site_x;
+					iss >> site_y;
+					iss >> site_z;
+				};
 			    iss >> species;
 			    // Find species
 			    auto sp = sp_map.find(species);
@@ -596,13 +606,20 @@ namespace lattg {
 			    	exit(EXIT_FAILURE);
 			    };
 		    	// Add
-		    	std::pair<bool,SiteIt3D> ret = make_mol(Site3D(1,1,atoi(site.c_str())),sp->second);
+		    	std::pair<bool,SiteIt3D> ret;
+		    	if (_dim == 1) {
+			    	ret = make_mol(Site3D(1,1,atoi(site_z.c_str())),sp->second);
+			    } else if (_dim == 2) {
+			    	ret = make_mol(Site3D(1,atoi(site_y.c_str()),atoi(site_z.c_str())),sp->second);
+			    } else if (_dim == 3) {
+			    	ret = make_mol(Site3D(atoi(site_x.c_str()),atoi(site_y.c_str()),atoi(site_z.c_str())),sp->second);
+			    };
 		    	if (!ret.first) {
 		    		std::cerr << "Error making mol?" << std::endl;
 		    		exit(EXIT_FAILURE);
 		    	};
 		    	// Reset
-		    	site="";
+		    	site_x=""; site_y=""; site_z="";
 		    	species="";
 			};
 		};
