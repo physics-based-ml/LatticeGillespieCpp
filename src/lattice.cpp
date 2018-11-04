@@ -9,6 +9,8 @@
 #include "math.h"
 #include <random>
 #include <sstream>
+#include <algorithm>
+#include <chrono>
 
 /************************************
 * Namespace for lattg
