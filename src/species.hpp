@@ -10,8 +10,8 @@
 namespace lattg {
 
 	// Forwards
-	class BiReaction;
-	class UniReaction;
+	struct BiReaction;
+	struct UniReaction;
 
 	/****************************************
 	General functions

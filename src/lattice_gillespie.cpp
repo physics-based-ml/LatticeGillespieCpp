@@ -79,6 +79,9 @@ namespace lattg {
 		// Timestep
 		double _dt;
 
+        // Writing dir
+        std::string _dir_write;
+        
 		// Time and value of the next unimolecular reaction
 		double _t_uni_next;
 		UniReaction *_uni_next; // Null indicates there is none scheduled
@@ -152,6 +155,12 @@ namespace lattg {
 
 		void diffuse_mols();
 
+        /********************
+         Set directory
+         ********************/
+        
+        void set_write_dir(std::string dir);
+        
 		/********************
 		Run simulation
 		********************/
@@ -232,6 +241,7 @@ namespace lattg {
 		_t_step = other._t_step;
 		_dt = other._dt;
 		_t_uni_next = other._t_uni_next;
+        _dir_write = other._dir_write;
 		if (other._uni_next == nullptr) {
 			_uni_next = nullptr;
 		} else {
@@ -260,6 +270,7 @@ namespace lattg {
 		_t_step = 0;
 		_dt = 0.0;
 		_t_uni_next = 0.0;
+        _dir_write = "";
 		_uni_next = nullptr;
 	};
 
@@ -392,9 +403,6 @@ namespace lattg {
 	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps)
 	{
 		// Start by populating lattice randomly
-
-		// Random number of initial particles (min is 1, max is box vol)
-		int n = randI(1, pow(_box_length,_dim));
 
 		// Random initial counts
 		int n_possible = pow(_box_length,_dim);
@@ -656,7 +664,14 @@ namespace lattg {
 		delete todo;
 	};
 
-
+    /********************
+     Set directory
+     ********************/
+    
+    void Simulation::Impl::set_write_dir(std::string dir) {
+        _dir_write = dir;
+    };
+    
 	/********************
 	Run simulation
 	********************/
@@ -911,6 +926,14 @@ namespace lattg {
 
 		_impl->populate_lattice(h_dict,j_dict,k_dict,q_dict,n_steps);
 	};
+    
+    /********************
+     Set directory
+     ********************/
+    
+    void Simulation::set_write_dir(std::string dir) {
+        _impl->set_write_dir(dir);
+    };
 
 	/********************
 	Run simulation
