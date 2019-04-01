@@ -60,4 +60,7 @@ python create_data_dirs.py
 
 Before running, adjust the range for the number of directories to output.
 
-Then, when running the main script, in the `run` command, specify the `data` directory in the final argument `dir`.
+Then, when running the main script, in the `run` command, specify the `data` directory in the final argument `dir`, e.g.
+```
+sim.run(n_steps,verbose,write_counts,write_nns,write_latt,write_step,write_version_no,"/path/to/data");
+```
