@@ -1,19 +1,30 @@
 # Gillespie on a Lattice in the single occupancy limit
 
-## Build
+## Features
 
-Use the makefile
+Unimolecular and bimolecular reactions on 1D, 2D, 3D lattices.
+
+![example](/figures/example.png)
+
+## Installation
+
+### Build
+
+Use `cmake`
 ```
+mkdir build
+cd build
+cmake ..
 make
 make install
 ```
 The default location is `/usr/local/lib` and `/usr/local/include`.
 
-## Including
+### Including
 
 Use the convenient `include <lattgillespie>`.
 
-## Linking
+### Linking
 
 Example:
 ```
@@ -25,12 +36,10 @@ export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/absolute/path/to/lib/folder
 ```
 else use the `-L` flag when linking. (`-L` needed at link time; `DYLD_LIBRARY_PATH` needed at runtime).
 
-## Namespace
+## Usage
+
+More documentation TBD!
+
+### Namespace
 
 The namespace is `lattg`.
-
-## Features
-
-Unimolecular and bimolecular reactions on 1D, 2D, 3D lattices.
-
-![example](/figures/example.png)
