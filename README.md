@@ -43,3 +43,21 @@ More documentation TBD!
 ### Namespace
 
 The namespace is `lattg`.
+
+### Setting up directory for output
+
+A directory structure must be created for the output.
+
+Use the included Python script `create_data_dirs.py`.
+
+For example:
+```
+mkdir data
+cd data
+cp /path/to/create_data_dirs.py ./
+python create_data_dirs.py
+```
+
+Before running, adjust the range for the number of directories to output.
+
+Then, when running the main script, in the `run` command, specify the `data` directory in the final argument `dir`.

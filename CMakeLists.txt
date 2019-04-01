@@ -23,6 +23,7 @@ add_library(lattgillespie SHARED
 	src/reactions.hpp
 	src/species.cpp
 	src/species.hpp
+	${HEADER_FILES}
 )
 
 target_include_directories(lattgillespie PRIVATE include/lattgillespie_bits)
