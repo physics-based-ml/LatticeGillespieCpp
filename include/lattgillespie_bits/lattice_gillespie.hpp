@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <memory>
 
 /************************************
 * Namespace for lattg
