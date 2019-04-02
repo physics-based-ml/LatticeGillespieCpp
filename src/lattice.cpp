@@ -632,134 +632,154 @@ namespace lattg {
 	Sample
 	********************/
 
-	void Lattice::sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, std::map<Species*, std::map<Species*, std::map<Species*,std::map<Species*,double>>>> &q_dict, int n_steps) {
+    void Lattice::sample_1d(sdict1 *h_dict, int n_steps) {
+        sample_1d(h_dict, nullptr, nullptr, nullptr, n_steps);
+    };
+    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, int n_steps) {
+        sample_1d(h_dict, j_dict, nullptr, nullptr, n_steps);
+    };
+    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, int n_steps) {
+        sample_1d(h_dict, j_dict, k_dict, nullptr, n_steps);
+    };
+    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, sdict4 *q_dict, int n_steps) {
 
-		if (_dim != 1 && ( k_dict.size() > 0 || q_dict.size() > 0) ) {
-			std::cerr << "ERROR! Triplet/quartic sampling for dims > 1 not yet supported" << std::endl;
-			exit(EXIT_FAILURE);
-		};
+        // Check dim
+        if (_dim != 1) {
+            std::cerr << ">>> Lattice::sample_1d <<< Error: sample_1d only allowed for 1D lattice" << std::endl;
+            exit(EXIT_FAILURE);
+        };
+        if (!h_dict) {
+            std::cerr << ">>> Lattice::sample_1d <<< Error: must provide at least h_dict" << std::endl;
+            exit(EXIT_FAILURE);
+        };
 
-		// Construct a vec of all possible species
-		std::vector<Species*> sp_vec;
-		for (auto sp_pair: h_dict) {
-			sp_vec.push_back(sp_pair.first);
-		};
+        // Construct a vec of all possible species
+        std::vector<Species*> sp_vec;
+        for (auto sp_pair: *h_dict) {
+            sp_vec.push_back(sp_pair.first);
+        };
+        
+        // Declarations
+        Site3D s;
+        double energy;
+        std::vector<double> props; // propensities
+        std::vector<double> probs; // probs
+        int i_chosen;
+        std::vector<Site3D> nbrs;
+        std::vector<std::pair<Site3D,Site3D>> nnbrs;
+        std::vector<std::vector<Site3D>> nnnbrs;
+        std::pair<bool,SiteIt3D> ret_nbr1,ret_nbr2,ret_nbr3;
+        
+        int init_k_idx_end = 1;
+        if (j_dict) {
+            init_k_idx_end = 2;
+        };
+        if (k_dict) {
+            init_k_idx_end = 3;
+        };
+        if (q_dict) {
+            init_k_idx_end = 4;
+        };
+        
+        // Run through all steps
+        for (int i_step=0; i_step<n_steps; i_step++) {
+            
+            // Go through every ... lattice site
+            for (int init_k_idx=1; init_k_idx<=init_k_idx_end; init_k_idx++) {
+                for (int k=init_k_idx; k<=_box_length_z; k+=init_k_idx_end) {
+                    
+                    // The site
+                    s = Site3D(1,1,k);
+                    
+                    // Clear propensities
+                    probs.clear();
+                    props.clear();
+                    props.push_back(0.0);
+                    
+                    // Propensity for no spin is exp(0) = 1
+                    probs.push_back(1.0);
+                    props.push_back(1.0);
+                    
+                    // Go through all possible species this could be, calculate propensities
+                    for (auto sp_new: sp_vec) {
+                        
+                        // Bias
+                        energy = h_dict->at(sp_new);
+                        
+                        // NN
+                        if (j_dict) {
+                            nbrs = get_all_neighbors(s);
+                            for (auto nbr: nbrs) {
+                                ret_nbr1 = get_mol_it(nbr);
+                                if (ret_nbr1.first) {
+                                    // Occupied
+                                    energy += j_dict->at(sp_new).at(ret_nbr1.second.it_1D->second.sp);
+                                };
+                            };
+                        };
 
-		// Declarations
-		Site3D s;
-		double energy;
-		std::vector<double> props; // propensities
-		std::vector<double> probs; // probs
-		int i_chosen;
-		std::vector<Site3D> nbrs;
-		std::vector<std::pair<Site3D,Site3D>> nnbrs;
-		std::vector<std::vector<Site3D>> nnnbrs;
-		std::pair<bool,SiteIt3D> ret_nbr1,ret_nbr2,ret_nbr3;
-
-		// Go over all steps
-		for (int i_step=0; i_step<n_steps; i_step++) {
-
-			// Go through all lattice sites
-			for (int i=1; i<=_box_length_x; i++) {
-				for (int j=1; j<=_box_length_y; j++) {
-					for (int k=1; k<=_box_length_z; k++) {
-
-						// The site
-						s = Site3D(i,j,k);
-
-						// Clear propensities
-						probs.clear();
-						props.clear();
-						props.push_back(0.0);
-
-						// Propensity for no spin is exp(0) = 1
-						probs.push_back(1.0);
-						props.push_back(1.0);
-						
-						// Go through all possible species this could be, calculate propensities
-						for (auto sp_new: sp_vec) {
-
-							// Bias
-							energy = h_dict[sp_new];
-
-							// NNs for J 
-							nbrs = get_all_neighbors(s);
-							for (auto nbr: nbrs) {
-								ret_nbr1 = get_mol_it(nbr);
-								if (ret_nbr1.first) {
-									// Occupied
-									energy += j_dict[sp_new][ret_nbr1.second.it_1D->second.sp];
-								};
-							};
-
-							// Triplets for K
-							if (k_dict.size() != 0) {
-								nnbrs = get_all_triplet_considerations(s);
-								for (auto nbr_pair: nnbrs) {
-									ret_nbr1 = get_mol_it(nbr_pair.first);
-									if (ret_nbr1.first) {
-										ret_nbr2 = get_mol_it(nbr_pair.second);
-										if (ret_nbr2.first) {
-											// Both occupied
-											energy += k_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp];
-										};
-									};
-								};
-							};
-
-							// Quartics for Q
-							if (q_dict.size() != 0) {
-								nnnbrs = get_all_quartic_considerations(s);
-								for (auto nbrs: nnnbrs) {
-									ret_nbr1 = get_mol_it(nbrs[0]);
-									if (ret_nbr1.first) {
-										ret_nbr2 = get_mol_it(nbrs[1]);
-										if (ret_nbr2.first) {
-											ret_nbr3 = get_mol_it(nbrs[2]);
-											if (ret_nbr3.first) {
-												// Both occupied
-												energy += q_dict[sp_new][ret_nbr1.second.it_1D->second.sp][ret_nbr2.second.it_1D->second.sp][ret_nbr3.second.it_1D->second.sp];
-											};
-										};
-									};
-								};
-							};
-
-							// Append prob
-							probs.push_back(exp(energy));
-							props.push_back(props.back()+exp(energy));
-						};
-
-						// Normalize probs
-						double tot=0.0;
-						for (auto pr: probs) {
-							tot += pr;
-						};
-						for (int i=0; i<probs.size(); i++) {
-							probs[i] /= tot;
-							// std::cout << probs[i] << " ";
-						};
-						// std::cout << std::endl;
-
-						// Sample RV
-						i_chosen = sample_prop_vec(props);
-
-						if (i_chosen==0) {
-							// Flip down (new spin = 0)
-							erase_mol(s);
-							// std::cout << " flipped down" << std::endl;
-						} else {
-							// Make the appropriate species at this site
-							replace_mol(s,sp_vec[i_chosen-1]);
-							// std::cout << " flipped up" << std::endl;
-						};
-
-					};
-				};
-			};
-		};
-	};
-
+                        // Triplets for K
+                        if (k_dict) {
+                            nnbrs = get_all_triplet_considerations(s);
+                            for (auto nbr_pair: nnbrs) {
+                                ret_nbr1 = get_mol_it(nbr_pair.first);
+                                if (ret_nbr1.first) {
+                                    ret_nbr2 = get_mol_it(nbr_pair.second);
+                                    if (ret_nbr2.first) {
+                                        // Both occupied
+                                        energy += k_dict->at(sp_new).at(ret_nbr1.second.it_1D->second.sp).at(ret_nbr2.second.it_1D->second.sp);
+                                    };
+                                };
+                            };
+                        };
+                        
+                        // Quartics for Q
+                        if (q_dict) {
+                            nnnbrs = get_all_quartic_considerations(s);
+                            for (auto nbrs: nnnbrs) {
+                                ret_nbr1 = get_mol_it(nbrs[0]);
+                                if (ret_nbr1.first) {
+                                    ret_nbr2 = get_mol_it(nbrs[1]);
+                                    if (ret_nbr2.first) {
+                                        ret_nbr3 = get_mol_it(nbrs[2]);
+                                        if (ret_nbr3.first) {
+                                            // Both occupied
+                                            energy += q_dict->at(sp_new).at(ret_nbr1.second.it_1D->second.sp).at(ret_nbr2.second.it_1D->second.sp).at(ret_nbr3.second.it_1D->second.sp);
+                                        };
+                                    };
+                                };
+                            };
+                        };
+                        
+                        // Append prob
+                        probs.push_back(exp(energy));
+                        props.push_back(props.back()+exp(energy));
+                    };
+                    
+                    // Normalize probs
+                    double tot=0.0;
+                    for (auto pr: probs) {
+                        tot += pr;
+                    };
+                    for (int i=0; i<probs.size(); i++) {
+                        probs[i] /= tot;
+                    };
+                    
+                    // Sample RV
+                    i_chosen = sample_prop_vec(props);
+                    
+                    if (i_chosen==0) {
+                        // Flip down (new spin = 0)
+                        erase_mol(s);
+                    } else {
+                        // Make the appropriate species at this site
+                        replace_mol(s,sp_vec.at(i_chosen-1));
+                    };
+                };
+            };
+        };
+    };
+    
 	/********************
 	Sample probabilities/propensities
 	********************/

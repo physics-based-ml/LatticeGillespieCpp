@@ -58,6 +58,11 @@ namespace lattg {
 	Lattice
 	****************************************/
 
+    typedef std::map<Species*,double> sdict1;
+    typedef std::map<Species*,sdict1> sdict2;
+    typedef std::map<Species*,sdict2> sdict3;
+    typedef std::map<Species*,sdict3> sdict4;
+    
 	class Lattice
 	{
 	protected:
@@ -165,10 +170,13 @@ namespace lattg {
 		void read_from_file(std::string fname, std::map<std::string,Species*> sp_map);
 
 		/********************
-		Sample
+		Sample in 1D ONLY
 		********************/
 
-		void sample(std::map<Species*,double> &h_dict,std::map<Species*, std::map<Species*,double>> &j_dict, std::map<Species*, std::map<Species*, std::map<Species*,double>>> &k_dict, std::map<Species*, std::map<Species*, std::map<Species*,std::map<Species*, double>>>> &q_dict, int n_steps);
+        void sample_1d(sdict1 *h_dict, int n_steps);
+        void sample_1d(sdict1 *h_dict,sdict2 *j_dict, int n_steps);
+        void sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, int n_steps);
+		void sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, sdict4 *q_dict, int n_steps);
 
 		/********************
 		Sample probabilities/propensities

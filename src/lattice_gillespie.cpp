@@ -13,7 +13,6 @@
 #include <math.h>
 #include <fstream>
 #include <vector>
-#include <list>
 
 // Diagnostic flags
 #define DIAG_DIFFUSE 0
@@ -40,16 +39,16 @@ namespace lattg {
 	};
 
 	// Print mvec
-	std::ostream& operator<<(std::ostream& os, const std::list<Species>& vs)
+	std::ostream& operator<<(std::ostream& os, const std::vector<Species*>& vs)
 	{
-		for (auto v : vs) { os << v.name << ": " << v.count << " "; };
+		for (auto v : vs) { os << v->name << ": " << v->count << " "; };
 		return os;
 	};
 
 	/****************************************
 	Main simulation IMPLEMENTATION HEADER
 	****************************************/
-
+    
 	class Simulation::Impl
 	{
 	private:
@@ -60,14 +59,14 @@ namespace lattg {
 		// The lattice
 		Lattice *_lattice;
 
-		// List of species
-		std::list<Species> _species;
+		// Vector of species
+		std::vector<Species*> _species;
 
-		// List of bimol rxns
-		std::list<BiReaction> _bi_rxns;
+		// Vector of bimol rxns
+		std::vector<BiReaction*> _bi_rxns;
 
-		// List of unimol rxns
-		std::list<UniReaction> _uni_rxns;
+		// Vector of unimol rxns
+		std::vector<UniReaction*> _uni_rxns;
 
 		// Box length
 		int _box_length;
@@ -90,7 +89,7 @@ namespace lattg {
 		Find a species by name
 		********************/
 
-		Species* _find_species(std::string name);
+		Species* _find_species(std::string name) const;
 
 		/********************
 		Schedule the next uni reaction
@@ -100,8 +99,7 @@ namespace lattg {
 
 		// Constructor helpers
 		void _clean_up();
-		void _copy(const Impl& other);
-		void _reset();
+        void _move(Impl &other);
 
 	public:
 
@@ -138,10 +136,18 @@ namespace lattg {
 		Populate lattice
 		********************/
 
+        std::vector<std::string> _vec_from_dict_keys(const dict1 &dict) const;
+        sdict1* _convert_dict_to_sdict(const dict1 &h_dict) const;
+        sdict2* _convert_dict_to_sdict(const dict2 &j_dict) const;
+        sdict3* _convert_dict_to_sdict(const dict3 &k_dict) const;
+        sdict4* _convert_dict_to_sdict(const dict4 &q_dict) const;
+
+        void populate_random(std::vector<std::string> sps);
 		void populate_lattice(std::map<std::string,int> counts);
-		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
-		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps);
-		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps);
+        void populate_lattice_1d(const dict1 &h_dict, int n_steps);
+		void populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, int n_steps);
+		void populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, int n_steps);
+		void populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, const dict4 &q_dict, int n_steps);
 
 		/********************
 		Do a uni reaction
@@ -207,14 +213,12 @@ namespace lattg {
 	};
 
 	Simulation::Impl::Impl(Impl&& other) {
-		_copy(other);
-		other._reset();
+		_move(other);
 	};
     Simulation::Impl& Simulation::Impl::operator=(Impl&& other) {
 		if (this != &other) {
 			_clean_up();
-			_copy(other);
-			other._reset();
+			_move(other);
 		};
 		return *this;
     };
@@ -229,8 +233,29 @@ namespace lattg {
 		if (_lattice != nullptr) {
 			delete _lattice;
 		};
+        
+        for (auto sp: _species) {
+            if (sp) {
+                delete sp;
+                sp = nullptr;
+            };
+        };
+
+        for (auto b: _bi_rxns) {
+            if (b) {
+                delete b;
+                b = nullptr;
+            };
+        };
+
+        for (auto u: _uni_rxns) {
+            if (u) {
+                delete u;
+                u = nullptr;
+            };
+        };
 	};
-	void Simulation::Impl::_copy(const Impl& other) {
+	void Simulation::Impl::_move(Impl& other) {
 		_dim = other._dim;
 		_box_length = other._box_length;
 		_lattice = new Lattice(*(other._lattice));
@@ -242,36 +267,21 @@ namespace lattg {
 		_dt = other._dt;
 		_t_uni_next = other._t_uni_next;
         _dir_write = other._dir_write;
-		if (other._uni_next == nullptr) {
-			_uni_next = nullptr;
-		} else {
-			// Search...
-			for (auto it = _uni_rxns.begin(); it != _uni_rxns.end(); it++) {
-				if (it->name == other._uni_next->name) {
-					_uni_next = &(*it);
-					break;
-				};
-			};
-			// Can't find?
-			if (_uni_next == nullptr) {
-				std::cerr << "Error: can't find uni reaction when copying" << std::endl;
-				exit(EXIT_FAILURE);
-			};
-		};
-	};
-	void Simulation::Impl::_reset() {
-		_dim = 3;
-		_lattice = nullptr;
-		_species.clear();
-		_bi_rxns.clear();
-		_uni_rxns.clear();
-		_box_length = 0;
-		_t = 0.0;
-		_t_step = 0;
-		_dt = 0.0;
-		_t_uni_next = 0.0;
-        _dir_write = "";
-		_uni_next = nullptr;
+        _uni_next = other._uni_next;
+        
+        // Clear the other
+        other._dim = 3;
+        other._lattice = nullptr;
+        other._species.clear();
+        other._bi_rxns.clear();
+        other._uni_rxns.clear();
+        other._box_length = 0;
+        other._t = 0.0;
+        other._t_step = 0;
+        other._dt = 0.0;
+        other._t_uni_next = 0.0;
+        other._dir_write = "";
+        other._uni_next = nullptr;
 	};
 
 	/********************
@@ -280,16 +290,12 @@ namespace lattg {
 
 	void Simulation::Impl::add_species(std::string name, bool conserved) {
 		// Add
-		this->_species.push_back(Species(name,conserved));
-		auto itu = this->_uni_rxns.begin();
-		while (itu != this->_uni_rxns.end()) {
-			this->_species.back().add_rxn(&(*itu));
-			itu++;
+		_species.push_back(new Species(name,conserved));
+        for (auto u: _uni_rxns) {
+			_species.back()->add_rxn(u);
 		};
-		auto itb = this->_bi_rxns.begin();
-		while (itb != this->_bi_rxns.end()) {
-			this->_species.back().add_rxn(&(*itb));
-			itb++;
+        for (auto b: _bi_rxns) {
+			_species.back()->add_rxn(b);
 		};
 	};
 
@@ -302,10 +308,10 @@ namespace lattg {
 		// Find the species
 		Species *sr = _find_species(r);
 		// Make the reaction
-		this->_uni_rxns.push_back(UniReaction(name,kr,sr));
+		_uni_rxns.push_back(new UniReaction(name,kr,sr));
 		// Add reaction to all species
-		for (auto species = this->_species.begin(); species != this->_species.end(); species++) {
-			species->add_rxn(&(this->_uni_rxns.back()));
+        for (auto species: _species) {
+			species->add_rxn(_uni_rxns.back());
 		};
 	};
 	void Simulation::Impl::add_uni_rxn(std::string name, double kr, std::string r, std::string p) {
@@ -313,10 +319,10 @@ namespace lattg {
 		Species *sr = _find_species(r);
 		Species *sp = _find_species(p);
 		// Make the reaction
-		this->_uni_rxns.push_back(UniReaction(name,kr,sr,sp));
+		_uni_rxns.push_back(new UniReaction(name,kr,sr,sp));
 		// Add reaction to all species
-		for (auto species = this->_species.begin(); species != this->_species.end(); species++) {
-			species->add_rxn(&(this->_uni_rxns.back()));
+        for (auto species: _species) {
+			species->add_rxn(_uni_rxns.back());
 		};
 	};
 	void Simulation::Impl::add_uni_rxn(std::string name, double kr, std::string r, std::string p1, std::string p2) {
@@ -325,10 +331,10 @@ namespace lattg {
 		Species *sp1 = _find_species(p1);
 		Species *sp2 = _find_species(p2);
 		// Make the reaction
-		this->_uni_rxns.push_back(UniReaction(name,kr,sr,sp1,sp2));
+		_uni_rxns.push_back(new UniReaction(name,kr,sr,sp1,sp2));
 		// Add reaction to all species
-		for (auto species = this->_species.begin(); species != this->_species.end(); species++) {
-			species->add_rxn(&(this->_uni_rxns.back()));
+        for (auto species: _species) {
+			species->add_rxn(_uni_rxns.back());
 		};
 	};
 
@@ -338,10 +344,10 @@ namespace lattg {
 		Species *sr1 = _find_species(r1);
 		Species *sr2 = _find_species(r2);
 		// Make the reaction
-		this->_bi_rxns.push_back(BiReaction(name,prob,sr1,sr2));
+		_bi_rxns.push_back(new BiReaction(name,prob,sr1,sr2));
 		// Add reaction to all species
-		for (auto species = this->_species.begin(); species != this->_species.end(); species++) {
-			species->add_rxn(&(this->_bi_rxns.back()));
+        for (auto species: _species) {
+			species->add_rxn(_bi_rxns.back());
 		};
 	};
 	void Simulation::Impl::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p) {
@@ -350,10 +356,10 @@ namespace lattg {
 		Species *sr2 = _find_species(r2);
 		Species *sp = _find_species(p);
 		// Make the reaction
-		this->_bi_rxns.push_back(BiReaction(name,prob,sr1,sr2,sp));
+		_bi_rxns.push_back(new BiReaction(name,prob,sr1,sr2,sp));
 		// Add reaction to all species
-		for (auto species = this->_species.begin(); species != this->_species.end(); species++) {
-			species->add_rxn(&(this->_bi_rxns.back()));
+        for (auto species: _species) {
+			species->add_rxn(_bi_rxns.back());
 		};
 	};
 	void Simulation::Impl::add_bi_rxn(std::string name, double prob, std::string r1, std::string r2, std::string p1, std::string p2) {
@@ -363,10 +369,10 @@ namespace lattg {
 		Species *sp1 = _find_species(p1);
 		Species *sp2 = _find_species(p2);
 		// Make the reaction
-		this->_bi_rxns.push_back(BiReaction(name,prob,sr1,sr2,sp1,sp2));
+		_bi_rxns.push_back(new BiReaction(name,prob,sr1,sr2,sp1,sp2));
 		// Add reaction to all species
-		for (auto species = this->_species.begin(); species != this->_species.end(); species++) {
-			species->add_rxn(&(this->_bi_rxns.back()));
+        for (auto species: _species) {
+			species->add_rxn(_bi_rxns.back());
 		};
 	};
 
@@ -374,6 +380,20 @@ namespace lattg {
 	Populate lattice
 	********************/
 
+    void Simulation::Impl::populate_random(std::vector<std::string> sps) {
+        // Random initial counts
+        int n_possible = pow(_box_length,_dim);
+        std::map<std::string,int> counts0;
+        for (auto sp : sps) {
+            counts0[sp] = randI(0,n_possible);
+            n_possible -= counts0[sp];
+            if (n_possible < 0) { n_possible = 0; };
+        };
+        
+        // Random initial lattice
+        populate_lattice(counts0);
+    };
+    
 	void Simulation::Impl::populate_lattice(std::map<std::string,int> counts) {
 	    // Go through all species
 		Species *s;
@@ -388,70 +408,106 @@ namespace lattg {
 		};
 	};
 
-	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict,std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
-		std::map<std::string,std::map<std::string,std::map<std::string,double>>> k_dict;
-		std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> q_dict;		
-		populate_lattice(h_dict,j_dict,k_dict,q_dict,n_steps);
+    std::vector<std::string> Simulation::Impl::_vec_from_dict_keys(const dict1 &dict) const {
+        std::vector<std::string> sps;
+        for (auto pr: dict) {
+            sps.push_back(pr.first);
+        };
+        return sps;
+    };
+    sdict1* Simulation::Impl::_convert_dict_to_sdict(const dict1 &h_dict) const {
+        sdict1* h_dict_sp = new sdict1();
+        for (auto const &hpr: h_dict) {
+            (*h_dict_sp)[_find_species(hpr.first)] = hpr.second;
+        };
+        return h_dict_sp;
+    };
+    sdict2* Simulation::Impl::_convert_dict_to_sdict(const dict2 &j_dict) const {
+        sdict2* j_dict_sp = new sdict2();
+        for (auto jpr1: j_dict) {
+            for (auto jpr2: jpr1.second) {
+                (*j_dict_sp)[_find_species(jpr1.first)][_find_species(jpr2.first)] = jpr2.second;
+            };
+        };
+        return j_dict_sp;
+    };
+    sdict3* Simulation::Impl::_convert_dict_to_sdict(const dict3 &k_dict) const {
+        sdict3* k_dict_sp = new sdict3();
+        for (auto kpr1: k_dict) {
+            for (auto kpr2: kpr1.second) {
+                for (auto kpr3: kpr2.second) {
+                    (*k_dict_sp)[_find_species(kpr1.first)][_find_species(kpr2.first)][_find_species(kpr3.first)] = kpr3.second;
+                };
+            };
+        };
+        return k_dict_sp;
+    };
+    sdict4* Simulation::Impl::_convert_dict_to_sdict(const dict4 &q_dict) const {
+        sdict4* q_dict_sp = new sdict4();
+        for (auto qpr1: q_dict) {
+            for (auto qpr2: qpr1.second) {
+                for (auto qpr3: qpr2.second) {
+                    for (auto qpr4: qpr3.second) {
+                        (*q_dict_sp)[_find_species(qpr1.first)][_find_species(qpr2.first)][_find_species(qpr3.first)][_find_species(qpr4.first)] = qpr4.second;
+                    };
+                };
+            };
+        };
+        return q_dict_sp;
+    };
+
+    void Simulation::Impl::populate_lattice_1d(const dict1 &h_dict, int n_steps) {
+        // Start by populating lattice randomly
+        populate_random(_vec_from_dict_keys(h_dict));
+        
+        // Run
+        auto h_dict_sp = _convert_dict_to_sdict(h_dict);
+        _lattice->sample_1d(h_dict_sp,n_steps);
+        delete h_dict_sp;
+    };
+    
+	void Simulation::Impl::populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, int n_steps) {
+        // Start by populating lattice randomly
+        populate_random(_vec_from_dict_keys(h_dict));
+        
+        // Run
+        auto h_dict_sp = _convert_dict_to_sdict(h_dict);
+        auto j_dict_sp = _convert_dict_to_sdict(j_dict);
+        _lattice->sample_1d(h_dict_sp,j_dict_sp,n_steps);
+        delete h_dict_sp;
+        delete j_dict_sp;
+    };
+
+	void Simulation::Impl::populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, int n_steps) {
+        // Start by populating lattice randomly
+        populate_random(_vec_from_dict_keys(h_dict));
+        
+        // Run
+        auto h_dict_sp = _convert_dict_to_sdict(h_dict);
+        auto j_dict_sp = _convert_dict_to_sdict(j_dict);
+        auto k_dict_sp = _convert_dict_to_sdict(k_dict);
+        _lattice->sample_1d(h_dict_sp,j_dict_sp,k_dict_sp,n_steps);
+        delete h_dict_sp;
+        delete j_dict_sp;
+        delete k_dict_sp;
 	};
 
-	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
-		std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> q_dict;		
-		populate_lattice(h_dict,j_dict,k_dict,q_dict,n_steps);
-	};
 
-
-	void Simulation::Impl::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps)
+	void Simulation::Impl::populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, const dict4 &q_dict, int n_steps)
 	{
-		// Start by populating lattice randomly
-
-		// Random initial counts
-		int n_possible = pow(_box_length,_dim);
-		std::map<std::string,int> counts0;
-		for (auto hpr : h_dict) {
-			counts0[hpr.first] = randI(0,n_possible);
-			n_possible -= counts0[hpr.first];
-			if (n_possible < 0) { n_possible = 0; };
-		};
-
-		// Random initial lattice
-		populate_lattice(counts0);
-
-		// TMP
-		// Write the lattice into a temp dir
-		// _lattice->write_to_file("lattice_v300/pre.txt");
-
-		// Convert the strings into species
-		std::map<Species*, double> h_dict_sp;
-		std::map<Species*,std::map<Species*,double>> j_dict_sp;
-		std::map<Species*,std::map<Species*,std::map<Species*,double>>> k_dict_sp;
-		std::map<Species*,std::map<Species*,std::map<Species*,std::map<Species*,double>>>> q_dict_sp;
-		for (auto hpr: h_dict) {
-			h_dict_sp[_find_species(hpr.first)] = hpr.second;
-		};
-		for (auto jpr1: j_dict) {
-			for (auto jpr2: jpr1.second) {
-				j_dict_sp[_find_species(jpr1.first)][_find_species(jpr2.first)] = jpr2.second;
-			};
-		};
-		for (auto kpr1: k_dict) {
-			for (auto kpr2: kpr1.second) {
-				for (auto kpr3: kpr2.second) {
-					k_dict_sp[_find_species(kpr1.first)][_find_species(kpr2.first)][_find_species(kpr3.first)] = kpr3.second;
-				};
-			};
-		};
-		for (auto qpr1: q_dict) {
-			for (auto qpr2: qpr1.second) {
-				for (auto qpr3: qpr2.second) {
-						for (auto qpr4: qpr3.second) {
-						q_dict_sp[_find_species(qpr1.first)][_find_species(qpr2.first)][_find_species(qpr3.first)][_find_species(qpr4.first)] = qpr4.second;
-					};
-				};
-			};
-		};
-
-		// Now sample
-		_lattice->sample(h_dict_sp,j_dict_sp,k_dict_sp,q_dict_sp,n_steps);
+        // Start by populating lattice randomly
+        populate_random(_vec_from_dict_keys(h_dict));
+        
+        // Run
+        auto h_dict_sp = _convert_dict_to_sdict(h_dict);
+        auto j_dict_sp = _convert_dict_to_sdict(j_dict);
+        auto k_dict_sp = _convert_dict_to_sdict(k_dict);
+        auto q_dict_sp = _convert_dict_to_sdict(q_dict);
+        _lattice->sample_1d(h_dict_sp,j_dict_sp,k_dict_sp,q_dict_sp,n_steps);
+        delete h_dict_sp;
+        delete j_dict_sp;
+        delete k_dict_sp;
+        delete q_dict_sp;
 	};
 
 	/********************
@@ -683,26 +739,22 @@ namespace lattg {
 		std::stringstream fname;
 		if (write_counts || write_nns || write_latt) {
 			// Clear counts
-			for (auto s: this->_species) {
-				fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
+			for (auto s: _species) {
+				fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s->name << ".txt";
 				ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
 				ofs.close();
 				fname.str("");
 			};
 			// Clear nns
-			auto it1 = this->_species.begin();
-			auto it2 = this->_species.begin();
-			while (it1 != this->_species.end()) {
-				it2 = it1;
-				while (it2 != this->_species.end()) {
-					fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
-					ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
-					ofs.close();
-					fname.str("");
-					it2++;
-				};
-				it1++;
-			};
+            for (auto i1=0; i1<_species.size(); i1++) {
+                for (auto i2=i1; i2<_species.size(); i2++) {
+                    fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << _species[i1]->name << "_" << _species[i2]->name << ".txt";
+                    ofs.open(fname.str(), std::ofstream::out | std::ofstream::trunc);
+                    ofs.close();
+                    fname.str("");
+                };
+            };
+            
 			// Clear lattice data
 			fname << "exec rm -r ./" << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/lattice/*";
 			system(fname.str().c_str());
@@ -714,63 +766,58 @@ namespace lattg {
 		for (int i_step=0; i_step < n_timesteps; i_step++) 
 		{
 			// The next time
-			t_next = this->_t + this->_dt;
+			t_next = _t + _dt;
 
 			// Print if needed
-			if (this->_t_step % 1 == 0) {
+			if (_t_step % 1 == 0) {
 				if (verbose) {
-					std::cout << "Time: " << this->_t << " / " << n_timesteps*this->_dt << " " << this->_species << std::endl;
+					std::cout << "Time: " << _t << " / " << n_timesteps*_dt << " " << _species << std::endl;
 				};
 			};
 
 			// Write if needed
-			if (this->_t_step % write_step == 0) {
+			if (_t_step % write_step == 0) {
 				if (write_counts) {
 					// Write counts to file
-					for (auto s: this->_species) {
-						fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s.name << ".txt";
+					for (auto s: _species) {
+						fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/counts/" << s->name << ".txt";
 						ofs.open(fname.str(), std::ofstream::app);
-						ofs << this->_t << " " << s.count << "\n";
+						ofs << _t << " " << s->count << "\n";
 						ofs.close();
 						fname.str("");
 					};
 				};
 				if (write_nns) {
 					// Write NNs to file
-					auto it1 = this->_species.begin();
-					auto it2 = this->_species.begin();
-					while (it1 != this->_species.end()) {
-						it2 = it1;
-						while (it2 != this->_species.end()) {
-							fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << it1->name << "_" << it2->name << ".txt";
+                    for (auto i1=0; i1<_species.size(); i1++) {
+                        for (auto i2=i1; i2<_species.size(); i2++) {
+							fname << dir << "/lattice_v" << std::setfill('0') << std::setw(3) << write_version_no << "/nns/" << _species[i1]->name << "_" << _species[i2]->name << ".txt";
 							ofs.open(fname.str(), std::ofstream::app);
-							ofs << this->_t << " " << _lattice->get_nn(&(*it1),&(*it2)) << "\n";
+							ofs << _t << " " << _lattice->get_nn(_species[i1],_species[i2]) << "\n";
 							ofs.close();
 							fname.str("");
-							it2++;
 						};
-						it1++;
 					};
 				};
 				if (write_latt) {
 					// Write the lattice
-					write_lattice(int(this->_t_step/write_step), write_version_no, dir);
+					write_lattice(int(_t_step/write_step), write_version_no, dir);
 				};
 			};
 
 			// Do we need to schedule unimolecular reactions?
 			// (Either start of sim, or there were none available before)
-			if (this->_uni_next == nullptr) {
+			if (_uni_next == nullptr) {
 				// Schedule unimolecular reactions
 				_schedule_uni();
 			};
 
 			// Do uni reactions
-			while (this->_uni_next != nullptr && this->_t_uni_next < t_next) {
+			while (_uni_next != nullptr && _t_uni_next < t_next) {
 				// Do it
-				do_uni_rxn(this->_uni_next);
+				do_uni_rxn(_uni_next);
 				// Advance time
-				this->_t = this->_t_uni_next;
+				_t = _t_uni_next;
 				// Schedule
 				_schedule_uni();
 			};
@@ -779,8 +826,8 @@ namespace lattg {
 			diffuse_mols();
 
 			// It is now the next time
-			this->_t = t_next;
-			this->_t_step++;
+			_t = t_next;
+			_t_step++;
 
 		};
 	};
@@ -799,8 +846,8 @@ namespace lattg {
 
 	void Simulation::Impl::read_lattice(std::string fname) {
 		std::map<std::string,Species*> sp_map;
-		for (auto s = _species.begin(); s!=_species.end(); s++) {
-			sp_map[s->name] = &*s;
+        for (auto s: _species) {
+			sp_map[s->name] = s;
 		};
 		_lattice->read_from_file(fname, sp_map);
 	};
@@ -813,14 +860,12 @@ namespace lattg {
 	Find a species by name
 	********************/
 
-	Species* Simulation::Impl::_find_species(std::string name) {
+	Species* Simulation::Impl::_find_species(std::string name) const {
 		// Go through the species
-		auto it = this->_species.begin();
-		while (it != this->_species.end()) {
-			if (it->name == name) {
-				return &(*it);
+        for (auto s: _species) {
+			if (s->name == name) {
+				return s;
 			};
-			it++;
 		};
 		return nullptr;
 	};
@@ -835,31 +880,31 @@ namespace lattg {
 		props.push_back(0.0);
 
 		// Go through all possible reagants, calculate propensities
-		for (auto u: this->_uni_rxns) 
+		for (auto u: _uni_rxns)
 		{
-			props_cum += u.r->count * u.kr;
+			props_cum += u->r->count * u->kr;
 			props.push_back(props_cum);
 		};
 
 		// Check that at least one reaction is possible
 		if (!(props_cum > 0)) {
-			this->_t_uni_next = this->_t;
-			this->_uni_next = nullptr; // Based on nullptr, will check again later
+			_t_uni_next = _t;
+			_uni_next = nullptr; // Based on nullptr, will check again later
 			return;
 		};
 
 		// Choose a reaction
 		double r = randD(0.0,props_cum);
-		auto it = this->_uni_rxns.begin();
+        int i = 0;
 		int n = 0;
 		while (!(props[n] < r && r < props[n+1])) {
 			n++;
-			it++;
+			i += 1;
 		};
-		this->_uni_next = &(*it);
+		_uni_next = _uni_rxns[i];
 
 		// Time of next reaction
-		this->_t_uni_next = this->_t + log(1.0/randD(0.0,1.0))/props_cum;
+		_t_uni_next = _t + log(1.0/randD(0.0,1.0))/props_cum;
 	};
 
 	/****************************************
@@ -913,18 +958,21 @@ namespace lattg {
 	Populate lattice
 	********************/
 
+    void Simulation::populate_random(std::vector<std::string> sps) {
+        _impl->populate_random(sps);
+    };
 	void Simulation::populate_lattice(std::map<std::string,int> counts) {
 		_impl->populate_lattice(counts);
 	};
-	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps) {
-		_impl->populate_lattice(h_dict,j_dict,n_steps);
+	void Simulation::populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, int n_steps) {
+		_impl->populate_lattice_1d(h_dict,j_dict,n_steps);
 	};
-	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps) {
-		_impl->populate_lattice(h_dict,j_dict,k_dict,n_steps);
+	void Simulation::populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, int n_steps) {
+		_impl->populate_lattice_1d(h_dict,j_dict,k_dict,n_steps);
 	};
-	void Simulation::populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps) {
+	void Simulation::populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, const dict4 &q_dict, int n_steps) {
 
-		_impl->populate_lattice(h_dict,j_dict,k_dict,q_dict,n_steps);
+		_impl->populate_lattice_1d(h_dict,j_dict,k_dict,q_dict,n_steps);
 	};
     
     /********************

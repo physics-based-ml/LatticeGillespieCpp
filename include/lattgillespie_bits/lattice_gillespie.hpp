@@ -12,6 +12,11 @@ namespace lattg {
 	Main simulation class
 	****************************************/
 
+    typedef std::map<std::string,double> dict1;
+    typedef std::map<std::string,dict1> dict2;
+    typedef std::map<std::string,dict2> dict3;
+    typedef std::map<std::string,dict3> dict4;
+
 	class Simulation
 	{
 	private:
@@ -54,10 +59,12 @@ namespace lattg {
 		Populate lattice
 		********************/
 
+        void populate_random(std::vector<std::string> sps);
 		void populate_lattice(std::map<std::string,int> counts);
-		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, int n_steps);
-		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, int n_steps);
-		void populate_lattice(std::map<std::string,double> &h_dict, std::map<std::string,std::map<std::string,double>> &j_dict, std::map<std::string, std::map<std::string,std::map<std::string,double>>> &k_dict, std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,double>>>> &q_dict, int n_steps);
+        void populate_lattice_1d(const dict1 &h_dict, int n_steps);
+        void populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, int n_steps);
+        void populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, int n_steps);
+        void populate_lattice_1d(const dict1 &h_dict, const dict2 &j_dict, const dict3 &k_dict, const dict4 &q_dict, int n_steps);
 
         /********************
         Set directory

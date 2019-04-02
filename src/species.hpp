@@ -30,7 +30,7 @@ namespace lattg {
 	/****************************************
 	Species
 	****************************************/
-	
+	    
 	struct Species {
 		std::string name;
 		std::map<Species*,std::vector<BiReaction*>> bi_rxns;
