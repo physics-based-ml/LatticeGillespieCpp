@@ -315,6 +315,12 @@ namespace lattg {
 		};
 	};
 	void Simulation::Impl::add_uni_rxn(std::string name, double kr, std::string r, std::string p) {
+        // Check against empty
+        if (r=="" && p=="") {
+            std::cerr << "Error add_uni_rxn: reactant and product cannot be nullptr" << std::endl;
+            exit(EXIT_FAILURE);
+        };
+        
 		// Find the species
 		Species *sr = _find_species(r);
 		Species *sp = _find_species(p);
@@ -326,6 +332,11 @@ namespace lattg {
 		};
 	};
 	void Simulation::Impl::add_uni_rxn(std::string name, double kr, std::string r, std::string p1, std::string p2) {
+        if (r=="") {
+            std::cerr << "Error add_uni_rxn: Only 0->A is supported, not 0->A+B" << std::endl;
+            exit(EXIT_FAILURE);
+        };
+
 		// Find the species
 		Species *sr = _find_species(r);
 		Species *sp1 = _find_species(p1);
@@ -882,7 +893,12 @@ namespace lattg {
 		// Go through all possible reagants, calculate propensities
 		for (auto u: _uni_rxns)
 		{
-			props_cum += u->r->count * u->kr;
+            if (u->r) {
+                props_cum += u->r->count * u->kr;
+            } else {
+                // 0 -> A ; use A
+                props_cum += u->p[0]->count * u->kr;
+            };
 			props.push_back(props_cum);
 		};
 
