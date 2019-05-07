@@ -64,7 +64,6 @@ namespace lattg {
 
 	std::pair<bool,BiReaction*> Species::check_bi_rxns_mol(Mol *other) {
 		std::map<Species*,std::vector<BiReaction*>>::iterator itm;
-		std::vector<BiReaction*>::iterator itb;
 
 		// Check all reactions on this species
 		itm = this->bi_rxns.find(other->sp);

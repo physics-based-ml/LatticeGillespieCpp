@@ -87,6 +87,7 @@ namespace lattg {
 
 		// Check if a site is in the latt
 		bool _check_if_in_latt(Site3D s);
+        Site3D _enforce_periodic_bc(Site3D s);
 
 		// Helpers
 		void _clean_up();
@@ -151,16 +152,16 @@ namespace lattg {
 		Get neighbors of a site
 		********************/
 
-		std::pair<Site3D,std::pair<bool,SiteIt3D>> get_neighbor_random(Site3D s);
-		std::pair<Site3D,std::pair<bool,SiteIt3D>> get_neighbor_random(SiteIt3D sit);
-		std::pair<bool,Site3D> get_free_neighbor_random(Site3D s);
-		std::pair<bool,Site3D> get_free_neighbor_random(SiteIt3D sit);
+		std::pair<Site3D,std::pair<bool,SiteIt3D>> get_neighbor_random(Site3D s, bool periodic=false);
+		std::pair<Site3D,std::pair<bool,SiteIt3D>> get_neighbor_random(SiteIt3D sit, bool periodic=false);
+		std::pair<bool,Site3D> get_free_neighbor_random(Site3D s, bool periodic=false);
+		std::pair<bool,Site3D> get_free_neighbor_random(SiteIt3D sit, bool periodic=false);
 
 		/********************
 		Get NN of species
 		********************/
 
-		int get_nn(Species *sa, Species *sb);
+		int get_nn(Species *sa, Species *sb, bool periodic=false);
 
 		/********************
 		Write/Read lattice to a file
@@ -173,10 +174,10 @@ namespace lattg {
 		Sample in 1D ONLY
 		********************/
 
-        void sample_1d(sdict1 *h_dict, int n_steps);
-        void sample_1d(sdict1 *h_dict,sdict2 *j_dict, int n_steps);
-        void sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, int n_steps);
-		void sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, sdict4 *q_dict, int n_steps);
+        void sample_1d(sdict1 *h_dict, int n_steps, bool periodic=false);
+        void sample_1d(sdict1 *h_dict,sdict2 *j_dict, int n_steps, bool periodic=false);
+        void sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, int n_steps, bool periodic=false);
+		void sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, sdict4 *q_dict, int n_steps, bool periodic=false);
 
 		/********************
 		Sample probabilities/propensities
@@ -198,7 +199,7 @@ namespace lattg {
 		Get all neighbors of a site
 		********************/
 
-		std::vector<Site3D> get_all_neighbors(Site3D s);
+		std::vector<Site3D> get_all_neighbors(Site3D s, bool periodic=false);
 		std::vector<std::pair<Site3D,Site3D>> get_all_triplet_considerations(Site3D s);
 		std::vector<std::vector<Site3D>> get_all_quartic_considerations(Site3D s);
 	};

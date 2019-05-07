@@ -453,10 +453,10 @@ namespace lattg {
 	Get neighbors of a site
 	********************/
 
-	std::pair<Site3D,std::pair<bool,SiteIt3D>> Lattice::get_neighbor_random(Site3D s)
+	std::pair<Site3D,std::pair<bool,SiteIt3D>> Lattice::get_neighbor_random(Site3D s, bool periodic)
 	{
 		// All neighbors
-		std::vector<Site3D> nbrs = get_all_neighbors(s);
+		std::vector<Site3D> nbrs = get_all_neighbors(s, periodic);
 
 		// Shuffle
 		std::random_shuffle(nbrs.begin(),nbrs.end());
@@ -476,15 +476,15 @@ namespace lattg {
 		};
 	};
 
-	std::pair<Site3D,std::pair<bool,SiteIt3D>> Lattice::get_neighbor_random(SiteIt3D sit)
+	std::pair<Site3D,std::pair<bool,SiteIt3D>> Lattice::get_neighbor_random(SiteIt3D sit, bool periodic)
 	{
-		return get_neighbor_random(Site3D(sit));
+		return get_neighbor_random(Site3D(sit),periodic);
 	};
 
-	std::pair<bool,Site3D> Lattice::get_free_neighbor_random(Site3D s) 
+	std::pair<bool,Site3D> Lattice::get_free_neighbor_random(Site3D s, bool periodic)
 	{
 		// All allowed nbrs
-		std::vector<Site3D> nbrs = get_all_neighbors(s);
+		std::vector<Site3D> nbrs = get_all_neighbors(s, periodic);
 
 		// Shuffle
 		std::random_shuffle(nbrs.begin(),nbrs.end());
@@ -501,16 +501,16 @@ namespace lattg {
 		return std::make_pair(false,Site3D());
 	};
 
-	std::pair<bool,Site3D> Lattice::get_free_neighbor_random(SiteIt3D sit) 
+	std::pair<bool,Site3D> Lattice::get_free_neighbor_random(SiteIt3D sit, bool periodic)
 	{
-		return get_free_neighbor_random(Site3D(sit));
+		return get_free_neighbor_random(Site3D(sit),periodic);
 	};
 
 	/********************
 	Get NN of species
 	********************/
 
-	int Lattice::get_nn(Species *sa, Species *sb)
+	int Lattice::get_nn(Species *sa, Species *sb, bool periodic)
 	{
 		int nn = 0;
 		// Go through all sites
@@ -525,7 +525,7 @@ namespace lattg {
 					if (spair.first) {
 						// This one is species A
 						// Now search all neigbors
-						nbrs = get_all_neighbors(s);
+						nbrs = get_all_neighbors(s, periodic);
 						// Go through all neighbors
 						for (auto nbr: nbrs) {
 							spair = get_mol_it(nbr,sb);
@@ -632,16 +632,16 @@ namespace lattg {
 	Sample
 	********************/
 
-    void Lattice::sample_1d(sdict1 *h_dict, int n_steps) {
-        sample_1d(h_dict, nullptr, nullptr, nullptr, n_steps);
+    void Lattice::sample_1d(sdict1 *h_dict, int n_steps, bool periodic) {
+        sample_1d(h_dict, nullptr, nullptr, nullptr, n_steps, periodic);
     };
-    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, int n_steps) {
-        sample_1d(h_dict, j_dict, nullptr, nullptr, n_steps);
+    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, int n_steps, bool periodic) {
+        sample_1d(h_dict, j_dict, nullptr, nullptr, n_steps, periodic);
     };
-    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, int n_steps) {
-        sample_1d(h_dict, j_dict, k_dict, nullptr, n_steps);
+    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, int n_steps, bool periodic) {
+        sample_1d(h_dict, j_dict, k_dict, nullptr, n_steps, periodic);
     };
-    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, sdict4 *q_dict, int n_steps) {
+    void Lattice::sample_1d(sdict1 *h_dict,sdict2 *j_dict, sdict3 *k_dict, sdict4 *q_dict, int n_steps, bool periodic) {
 
         // Check dim
         if (_dim != 1) {
@@ -708,7 +708,7 @@ namespace lattg {
                         
                         // NN
                         if (j_dict) {
-                            nbrs = get_all_neighbors(s);
+                            nbrs = get_all_neighbors(s, periodic);
                             for (auto nbr: nbrs) {
                                 ret_nbr1 = get_mol_it(nbr);
                                 if (ret_nbr1.first) {
@@ -845,12 +845,37 @@ namespace lattg {
 			return false;
 		};
 	};
+    
+    // Check if a site is in the latt
+    Site3D Lattice::_enforce_periodic_bc(Site3D s) {
+        Site3D r = s;
+        if (r.x > this->_box_length_x) {
+            r.x = 1;
+        };
+        if (r.x < 1) {
+            r.x = this->_box_length_x;
+        };
+        if (r.y > this->_box_length_y) {
+            r.y = 1;
+        };
+        if (r.y < 1) {
+            r.y = this->_box_length_y;
+        };
+        if (r.z > this->_box_length_z) {
+            r.z = 1;
+        };
+        if (r.z < 1) {
+            r.z = this->_box_length_z;
+        };
+        
+        return r;
+    };
 
 	/********************
 	Get all neighbors of a site
 	********************/
 
-	std::vector<Site3D> Lattice::get_all_neighbors(Site3D s)
+	std::vector<Site3D> Lattice::get_all_neighbors(Site3D s, bool periodic)
 	{
 		std::vector<Site3D> nbrs;
 		Site3D nbr = s;
@@ -861,7 +886,9 @@ namespace lattg {
 			nbr.y += step.y;
 			nbr.z += step.z;
 			// Check
-			if (_check_if_in_latt(nbr)) {
+            if (periodic) {
+                nbrs.push_back(_enforce_periodic_bc(nbr));
+            } else if (_check_if_in_latt(nbr)) {
 				nbrs.push_back(nbr);
 			};
 		};

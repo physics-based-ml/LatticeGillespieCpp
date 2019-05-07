@@ -159,7 +159,7 @@ namespace lattg {
 		Diffuse all the mols and do bimol reactions
 		********************/
 
-		void diffuse_mols();
+		void diffuse_mols(bool periodic);
 
         /********************
          Set directory
@@ -171,7 +171,7 @@ namespace lattg {
 		Run simulation
 		********************/
 
-		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0, std::string dir=".");
+		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0, std::string dir=".", bool periodic_bc=false);
 
 		/********************
 		Write/Read lattice
@@ -529,6 +529,7 @@ namespace lattg {
 
 		// Declarations
 		std::pair<bool,SiteIt3D> get_it;
+        std::pair<bool,Site3D> get_empty;
 		SiteIt3D sit;
 		Site3D s,snbr;
 		std::pair<bool,Site3D> free_pair;
@@ -538,42 +539,57 @@ namespace lattg {
 		int ctr = 0;
 		while (ctr < 20) {
 
-			// Grab a random site
-			get_it = _lattice->get_mol_random_it(rxn->r);
-			if (!(get_it.first)) {
-				// No sites with this species exist; stop
-				return;
-			};
-			sit = get_it.second;
-			s = Site3D(sit);
+            if (rxn->r) {
+                
+                // Grab a random site with this species
+                get_it = _lattice->get_mol_random_it(rxn->r);
+                if (!(get_it.first)) {
+                    return; // Impossible; stop
+                };
+                sit = get_it.second;
+                s = Site3D(sit);
+                
+                // Check if there is room for the products
+                if (rxn->p.size() == 2) {
+                    free_pair = _lattice->get_free_neighbor_random(sit);
+                    if (!(free_pair.first)) {
+                        // Not enough room for the two products; try again with a different random site
+                        ctr += 1;
+                        continue;
+                    } else {
+                        snbr = free_pair.second;
+                    };
+                };
+                
+                // Remove the reactant
+                _lattice->erase_mol_it(sit);
 
-			// Check if there is room for the products
-			if (rxn->p.size() == 2) {
-				free_pair = _lattice->get_free_neighbor_random(sit);
-				if (!(free_pair.first)) {
-					// Not enough room for the two products; try again with a different random site
-					ctr += 1;
-					continue;
-				} else {
-					snbr = free_pair.second;
-				};
-			};
+                // Conserve reactants
+                if (rxn->r->conserved) {
+                    _lattice->make_mol_random(rxn->r);
+                };
+                
+                // Place products, if needed at the neighbor site
+                if (rxn->p.size() == 1) {
+                    _lattice->make_mol(s, rxn->p[0]);
+                } else if (rxn->p.size() == 2) {
+                    _lattice->make_mol(s, rxn->p[0]);
+                    _lattice->make_mol(snbr, rxn->p[1]);
+                };
 
-			// Remove the reactant
-			_lattice->erase_mol_it(sit);
-
-			// Conserve reactants
-			if (rxn->r->conserved) {
-				_lattice->make_mol_random(rxn->r);
-			};
-
-			// Place products, if needed at the neighbor site
-			if (rxn->p.size() == 1) {
-				_lattice->make_mol(s, rxn->p[0]);
-			} else if (rxn->p.size() == 2) {
-				_lattice->make_mol(s, rxn->p[0]);
-				_lattice->make_mol(snbr, rxn->p[1]);
-			};
+            } else {
+                
+                // Reaction is type 0->A
+                // Get an empty site!
+                get_empty = _lattice->get_free_site();
+                if (!(get_empty.first)) {
+                    return; // Impossible; stop
+                };
+                s = get_empty.second;
+                
+                // Place products; only 1 is allowed anyways
+                _lattice->make_mol(s, rxn->p[0]);
+            };
 
 			// Conserve products
 			for (auto p: rxn->p)
@@ -592,7 +608,7 @@ namespace lattg {
 	Diffuse all the mols and do bimol reactions
 	********************/
 
-	void Simulation::Impl::diffuse_mols() 
+	void Simulation::Impl::diffuse_mols(bool periodic)
 	{
 		// Copy the old map
 		Lattice *todo = new Lattice(*_lattice);
@@ -629,7 +645,7 @@ namespace lattg {
 			if (DIAG_DIFFUSE) { std::cout << "diffuse_mols: got element..." << std::flush; };
 
 			// Move
-			nbr_pair = todo->get_neighbor_random(sOldIt);
+			nbr_pair = todo->get_neighbor_random(sOldIt, periodic);
 			sNew = nbr_pair.first;
 
 			if (DIAG_DIFFUSE) { std::cout << "got neighbor..." << std::flush; };
@@ -743,7 +759,7 @@ namespace lattg {
 	Run simulation
 	********************/
 
-	void Simulation::Impl::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no, std::string dir)
+	void Simulation::Impl::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no, std::string dir, bool periodic_bc)
 	{
 		// Clear data in files if writing
 		std::ofstream ofs;
@@ -834,7 +850,7 @@ namespace lattg {
 			};
 
 			// Diffuse and do bimol reactions
-			diffuse_mols();
+			diffuse_mols(periodic_bc);
 
 			// It is now the next time
 			_t = t_next;
@@ -1003,8 +1019,8 @@ namespace lattg {
 	Run simulation
 	********************/
 
-	void Simulation::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no, std::string dir) {
-		_impl->run(n_timesteps,verbose,write_counts,write_nns,write_latt,write_step,write_version_no, dir);
+	void Simulation::run(int n_timesteps, bool verbose, bool write_counts, bool write_nns, bool write_latt, int write_step, int write_version_no, std::string dir, bool periodic_bc) {
+		_impl->run(n_timesteps,verbose,write_counts,write_nns,write_latt,write_step,write_version_no, dir, periodic_bc);
 	};
 
 	/********************

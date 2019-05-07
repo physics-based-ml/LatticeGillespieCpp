@@ -77,7 +77,7 @@ namespace lattg {
 		Run simulation
 		********************/
 
-		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0, std::string dir=".");
+		void run(int n_timesteps, bool verbose = true, bool write_counts = false, bool write_nns = false, bool write_latt = false, int write_step = 20, int write_version_no = 0, std::string dir=".", bool periodic_bc=false);
 
 		/********************
 		Write/Read lattice
