@@ -913,7 +913,13 @@ namespace lattg {
                 props_cum += u->r->count * u->kr;
             } else {
                 // 0 -> A ; use A
-                props_cum += u->p[0]->count * u->kr;
+                if (u->p[0]->count != 0) {
+                    props_cum += u->p[0]->count * u->kr;
+                } else {
+                    // Fix: this rxn must ALWAYS be possible!
+                    // Change count to 1
+                    props_cum += 1 * u->kr;
+                };
             };
 			props.push_back(props_cum);
 		};
